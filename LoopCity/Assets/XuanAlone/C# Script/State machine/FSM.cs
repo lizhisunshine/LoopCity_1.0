@@ -12,6 +12,7 @@ namespace MY_FSM
         Move,//移动
         Attack,//攻击
         Die,//死亡
+        Chase, // 追踪
     }
 
     public interface IState
@@ -33,6 +34,10 @@ namespace MY_FSM
         public IState curState;
         public Dictionary<StateType, IState> states;
         public Blackboard blackboard;
+
+        // 添加 prevState 支持
+        public IState prevState;
+        public StateType prevStateType;
 
         public FSM(Blackboard blackboard)
         {
@@ -57,6 +62,21 @@ namespace MY_FSM
                 Debug.Log("[SwitchState] >>>>>>>>>> not contain key:" + stateType);
                 return;
             }
+
+            // 记录前一个状态
+            if (curState != null)
+            {
+                prevState = curState;
+                foreach (var kvp in states)
+                {
+                    if (kvp.Value == curState)
+                    {
+                        prevStateType = kvp.Key;
+                        break;
+                    }
+                }
+            }
+
             if (curState != null)
             {
                 curState.OnExit();
@@ -67,15 +87,17 @@ namespace MY_FSM
 
         public void OnUpdate()
         {
-            curState.OnUpdate();
+            curState?.OnUpdate();
         }
-        public void OnFixUpdate()
+
+        internal void OnCheck()
         {
-            //curState.OnFixUpdate();
+            throw new NotImplementedException();
         }
-        public void OnCheck()
+
+        internal void OnFixUpdate()
         {
-            //curState.OnCheck();
+            throw new NotImplementedException();
         }
     }
 }
