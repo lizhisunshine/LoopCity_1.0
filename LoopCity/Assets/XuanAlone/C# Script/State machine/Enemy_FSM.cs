@@ -53,12 +53,12 @@ public class Enemy_IdleState : IState
 
 //移动逻辑
 #region 移动逻辑
-public class Player_MoveState : IState
+public class Enemy_MoveState : IState
 {
     private FSM fsm;
     private EnemyBlackbroad blackboard;
     private Vector2 targetPos;
-    public Player_MoveState(FSM fsm)
+    public Enemy_MoveState(FSM fsm)
     {
         this.fsm = fsm;
         this.blackboard = fsm.blackboard as EnemyBlackbroad;
@@ -66,10 +66,10 @@ public class Player_MoveState : IState
 
     public void OnEnter()
     {
-        float randomX = Random.Range(-10, 10);
-        float randomY = Random.Range(-10, 10);
+        float randomX = Random.Range(-5, 5);
+        float randomY = Random.Range(-5, 5);
         //从黑板中获取当前位置
-        blackboard.targetPos = new Vector2(blackboard.transform.position.x + randomX, blackboard.transform.position.y);
+        blackboard.targetPos = new Vector2(blackboard.transform.position.x + randomX, blackboard.transform.position.y+randomY);
     }
 
     public void OnExit()
@@ -85,7 +85,7 @@ public class Player_MoveState : IState
         }
         else
         {
-            blackboard.transform.position = Vector2.MoveTowards(blackboard.transform.position, targetPos, blackboard.moveSpeed * Time.deltaTime);
+            blackboard.transform.position = Vector2.MoveTowards(blackboard.transform.position, blackboard.targetPos, blackboard.moveSpeed * Time.deltaTime);
         }
     }
 }
@@ -97,9 +97,12 @@ public class Enemy_FSM : MonoBehaviour
 
     void Start()
     {
+        // 初始化黑板数据
+        if (blackboard == null) blackboard = new EnemyBlackbroad();
+        blackboard.transform = transform;  // 关键：设置transform引用
         fsm = new FSM(blackboard);
         fsm.AddState((MY_FSM.StateType)StateType.Idle, new Enemy_IdleState(fsm));
-        fsm.AddState((MY_FSM.StateType)StateType.Move, new Enemy_IdleState(fsm));
+        fsm.AddState((MY_FSM.StateType)StateType.Move, new Enemy_MoveState(fsm));
         fsm.SwitchState((MY_FSM.StateType)StateType.Idle);
     }
 
@@ -117,11 +120,11 @@ public class Enemy_FSM : MonoBehaviour
         {
             if (blackboard.targetPos.x > transform.position.x)
             {
-                transform.localPosition = new Vector2(-1, 1);
+                transform.localScale = new Vector2(-1, 1);
             }
             else
             {
-                transform.localPosition = new Vector2(1, 1);
+                transform.localScale = new Vector2(1, 1);
             }
         }
     }
