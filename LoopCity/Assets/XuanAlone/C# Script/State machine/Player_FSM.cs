@@ -2,11 +2,15 @@ using UnityEngine;
 using MY_FSM;
 using System;
 using Random = UnityEngine.Random;
+using static UnityEditor.Rendering.CoreEditorDrawer<TData>;
 
 // 主角黑板数据
 [Serializable]
 public class PlayerBlackboard : Blackboard
 {
+    [Header("组件引用")]
+    public PlayerHealth playerHealth;
+
     [Header("角色属性")]
     public float maxHealth = 100f;
     public float moveSpeed = 5f;
@@ -71,6 +75,11 @@ public class Player_IdleState : IState
 
     public void OnUpdate()
     {
+        if (blackboard.playerHealth.currentHealth <= 0)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Die);
+            return;
+        }
         // 获取输入
         blackboard.moveDirection = new Vector2(
             Input.GetAxisRaw("Horizontal"),
@@ -122,6 +131,12 @@ public class Player_MoveState : IState
 
     public void OnUpdate()
     {
+        if (blackboard.playerHealth.currentHealth <= 0)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Die);
+            return;
+        }
+
         // 方向控制 ================================
         if (blackboard.moveDirection.x != 0)
         {
@@ -219,7 +234,14 @@ public class Player_AttackState : IState
 
     public void OnExit() { }
 
-    public void OnUpdate() { }
+    public void OnUpdate()
+    {
+        if (blackboard.playerHealth.currentHealth <= 0)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Die);
+            return;
+        }
+    }
 
     private void FireBullet()
     {
@@ -271,65 +293,205 @@ public class Player_DieState : IState
     {
         // 死亡处理 - 停止移动，禁用控制等
         blackboard.rb.velocity = Vector2.zero;
-        Debug.Log("Player died!");
 
-        // 这里可以添加死亡动画、游戏结束逻辑等
+        // 禁用物理碰撞
+        if (blackboard.rb != null)
+        {
+            blackboard.rb.simulated = false; // 禁用物理
+        }
+
+        // 播放死亡动画
+        if (blackboard.animator != null)
+        {
+            blackboard.animator.SetTrigger("Die");
+        }
+
+        // 禁用玩家控制 - 禁用整个游戏对象或特定组件
+        // 改为禁用整个游戏对象
+        blackboard.transform.gameObject.SetActive(false);
     }
 
     public void OnExit() { }
 
-    public void OnUpdate() { }
+    public void OnUpdate()
+    {
+        if (blackboard.playerHealth.currentHealth <= 0)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Die);
+            return;
+        }
+    
+    }
 }
 
 
 // 主角状态机控制器
 public class Player_FSM : MonoBehaviour
 {
+    [Header("玩家状态机设置")]
     public PlayerBlackboard blackboard;
     private FSM fsm;
 
+    // 添加缺失的子弹设置字段
     [Header("子弹设置")]
     public GameObject bulletPrefab;
     public Transform firePoint;
 
     void Start()
     {
-        blackboard.animator = GetComponent<Animator>();
+        Debug.Log("Player_FSM Start begin");
 
-        // 初始化黑板
-        if (blackboard == null) blackboard = new PlayerBlackboard();
+        // 1. 确保 PlayerHealth 组件存在
+        PlayerHealth playerHealth = GetComponent<PlayerHealth>();
+        if (playerHealth == null)
+        {
+            Debug.Log("Adding PlayerHealth component");
+            playerHealth = gameObject.AddComponent<PlayerHealth>();
+        }
 
-        // 设置引用
+        // 2. 确保黑板对象已创建
+        if (blackboard == null)
+        {
+            Debug.Log("Creating new PlayerBlackboard");
+            blackboard = new PlayerBlackboard();
+        }
+
+        // 3. 设置 transform 引用
         blackboard.transform = transform;
-        blackboard.rb = GetComponent<Rigidbody2D>();
+        Debug.Log($"Transform set: {blackboard.transform != null}");
+
+        // 4. 获取 Rigidbody2D 组件
+        Rigidbody2D rb = GetComponent<Rigidbody2D>();
+        if (rb == null)
+        {
+            Debug.LogWarning("Adding Rigidbody2D component");
+            rb = gameObject.AddComponent<Rigidbody2D>();
+        }
+        blackboard.rb = rb;
+        Debug.Log($"Rigidbody2D set: {blackboard.rb != null}");
+
+        // 5. 确保 firePoint 有效
+        if (firePoint == null)
+        {
+            Debug.LogWarning("FirePoint not set, trying to find or create one");
+            firePoint = transform.Find("FirePoint");
+            if (firePoint == null)
+            {
+                Debug.Log("Creating FirePoint child object");
+                GameObject fpObj = new GameObject("FirePoint");
+                fpObj.transform.SetParent(transform);
+                fpObj.transform.localPosition = new Vector3(0.5f, 0, 0); // 默认位置
+                firePoint = fpObj.transform;
+            }
+        }
         blackboard.firePoint = firePoint;
+        Debug.Log($"FirePoint set: {blackboard.firePoint != null}");
+
+        // 6. 确保子弹预制体有效
+        if (bulletPrefab == null)
+        {
+            Debug.LogWarning("BulletPrefab not set, trying to load default");
+            bulletPrefab = Resources.Load<GameObject>("DefaultBullet");
+            if (bulletPrefab == null)
+            {
+                Debug.LogError("Default bullet prefab not found in Resources");
+                // 创建临时子弹作为后备
+                bulletPrefab = CreateFallbackBullet();
+            }
+        }
         blackboard.bulletPrefab = bulletPrefab;
+        Debug.Log($"BulletPrefab set: {blackboard.bulletPrefab != null}");
+
+        // 7. 获取动画控制器
+        Animator animator = GetComponent<Animator>();
+        if (animator == null)
+        {
+            Debug.LogWarning("Animator not found on player");
+        }
+        blackboard.animator = animator;
+        Debug.Log($"Animator set: {blackboard.animator != null}");
+
+        // 8. 设置玩家健康组件
+        blackboard.playerHealth = playerHealth;
+        Debug.Log($"PlayerHealth set: {blackboard.playerHealth != null}");
+
+        // 9. 初始化当前生命值
         blackboard.currentHealth = blackboard.maxHealth;
+        Debug.Log($"Current health set: {blackboard.currentHealth}");
 
-        // 初始化状态机
+        // 10. 初始化状态机
         fsm = new FSM(blackboard);
-        // 关键修改：设置碰撞层
-        gameObject.layer = LayerMask.NameToLayer("Player");
+        Debug.Log("FSM created");
 
-        // 添加状态
-        fsm.AddState(MY_FSM.StateType.Idle, new Player_IdleState(fsm));
-        fsm.AddState(MY_FSM.StateType.Move, new Player_MoveState(fsm));
-        fsm.AddState(MY_FSM.StateType.Attack, new Player_AttackState(fsm));
-        fsm.AddState(MY_FSM.StateType.Die, new Player_DieState(fsm));
+        // 设置游戏对象层
+        int playerLayer = LayerMask.NameToLayer("Player");
+        if (playerLayer != -1)
+        {
+            gameObject.layer = playerLayer;
+            Debug.Log($"Layer set to Player: {playerLayer}");
+        }
+        else
+        {
+            Debug.LogWarning("Player layer not defined");
+        }
 
-        // 初始状态
+        // 11. 添加状态
+        try
+        {
+            fsm.AddState(MY_FSM.StateType.Idle, new Player_IdleState(fsm));
+            fsm.AddState(MY_FSM.StateType.Move, new Player_MoveState(fsm));
+            fsm.AddState(MY_FSM.StateType.Attack, new Player_AttackState(fsm));
+            fsm.AddState(MY_FSM.StateType.Die, new Player_DieState(fsm));
+            Debug.Log("States added to FSM");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error adding states: {ex.Message}");
+        }
+
+        // 12. 设置初始状态
         fsm.SwitchState(MY_FSM.StateType.Idle);
+        Debug.Log("Initial state set to Idle");
+
+        // 13. 注册死亡事件
+        playerHealth.onDeath.AddListener(OnPlayerDeath);
+        Debug.Log("Death event listener added");
+
+        Debug.Log("Player_FSM Start completed");
+    }
+
+    // 创建临时子弹作为后备方案
+    private GameObject CreateFallbackBullet()
+    {
+        GameObject bullet = new GameObject("FallbackBullet");
+        bullet.AddComponent<SpriteRenderer>();
+        bullet.AddComponent<CircleCollider2D>().isTrigger = true;
+        BulletController bc = bullet.AddComponent<BulletController>();
+        bc.damage = 10f;
+        bc.speed = 10f;
+
+        // 保存为临时预制体
+#if UNITY_EDITOR
+        if (!Application.isPlaying)
+        {
+            UnityEditor.PrefabUtility.SaveAsPrefabAsset(bullet, "Assets/FallbackBullet.prefab");
+        }
+#endif
+
+        return bullet;
+    }
+
+    void OnPlayerDeath()
+    {
+        if (fsm.curState != fsm.states[MY_FSM.StateType.Die])
+        {
+            fsm.SwitchState(MY_FSM.StateType.Die);
+        }
     }
 
     void Update()
     {
         fsm.OnUpdate();
-        UpdateHealth();
-
-        // 调试：显示当前状态
-        if (fsm.curState is Player_IdleState) Debug.Log("State: Idle");
-        else if (fsm.curState is Player_MoveState) Debug.Log("State: Move");
-        else if (fsm.curState is Player_AttackState) Debug.Log("State: Attack");
     }
 
     void FixedUpdate()
@@ -337,32 +499,11 @@ public class Player_FSM : MonoBehaviour
         // 物理更新
     }
 
-    // 处理碰撞伤害
     void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            TakeDamage(10f);
+            blackboard.playerHealth.TakeDamage(10f);
         }
     }
-
-    // 更新生命值
-    void UpdateHealth()
-    {
-        if (blackboard.currentHealth <= 0 && fsm.curState != fsm.states[MY_FSM.StateType.Die])
-        {
-            fsm.SwitchState(MY_FSM.StateType.Die);
-        }
-    }
-
-    // 受到伤害
-    public void TakeDamage(float damage)
-    {
-        blackboard.currentHealth -= damage;
-        blackboard.currentHealth = Mathf.Clamp(blackboard.currentHealth, 0, blackboard.maxHealth);
-        Debug.Log($"Player took {damage} damage! Health: {blackboard.currentHealth}/{blackboard.maxHealth}");
-    }
-
-    // 调试绘制
-    
 }

@@ -13,6 +13,12 @@ namespace MY_FSM
         Attack,//¹¥»÷
         Die,//ËÀÍö
         Chase, // ×·×Ù
+        Exxplode,
+        Dash,
+        Shoot,
+        ShooterMove,
+        Explode,
+
     }
 
     public interface IState
