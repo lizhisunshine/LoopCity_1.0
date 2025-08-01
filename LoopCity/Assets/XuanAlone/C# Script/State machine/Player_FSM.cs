@@ -28,6 +28,20 @@ public class PlayerBlackboard : Blackboard
     [Header("动画控制")]
     public Animator animator;
     public float lastHorizontal = 1f; // 默认朝右
+    [Header("方向控制")]
+    public float lastValidHorizontal = 1f; // 默认朝右
+    public bool facingRight = true; // 当前朝向
+
+    // 新增方法：更新瞄准方向
+    public void UpdateAimDirection()
+    {
+        // 获取鼠标位置并转换为世界坐标
+        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        mousePosition.z = 0;
+
+        // 计算朝向鼠标的方向
+        aimDirection = (mousePosition - transform.position).normalized;
+    }
 }
 
 // 待机状态
@@ -44,9 +58,11 @@ public class Player_IdleState : IState
 
     public void OnEnter()
     {
-        // 重置移动速度动画参数
+        // 使用最后有效方向
         if (blackboard.animator)
         {
+            blackboard.animator.SetFloat("Horizontal", blackboard.lastValidHorizontal);
+            blackboard.animator.SetFloat("Vertical", 0f);
             blackboard.animator.SetFloat("Speed", 0f);
         }
     }
@@ -60,6 +76,9 @@ public class Player_IdleState : IState
             Input.GetAxisRaw("Horizontal"),
             Input.GetAxisRaw("Vertical")
         ).normalized;
+
+        // 更新瞄准方向（关键修复：在Idle状态也要更新）
+        blackboard.UpdateAimDirection();
 
         // 如果有移动输入，切换到移动状态
         if (blackboard.moveDirection.magnitude > 0.1f)
@@ -103,18 +122,23 @@ public class Player_MoveState : IState
 
     public void OnUpdate()
     {
+        // 方向控制 ================================
+        if (blackboard.moveDirection.x != 0)
+        {
+            // 更新水平方向
+            blackboard.facingRight = blackboard.moveDirection.x > 0;
+            blackboard.lastValidHorizontal = blackboard.facingRight ? 1f : -1f;
+        }
 
-        // 动画控制 ================================
+        // 设置动画参数
         if (blackboard.animator)
         {
-            // 更新最后水平方向（仅当有水平输入时）
-            if (blackboard.moveDirection.x != 0)
-            {
-                blackboard.lastHorizontal = Mathf.Sign(blackboard.moveDirection.x);
-            }
+            // 上下移动时使用最后有效水平方向
+            float animHorizontal = blackboard.moveDirection.x != 0 ?
+                blackboard.moveDirection.x :
+                blackboard.lastValidHorizontal;
 
-            // 设置动画参数
-            blackboard.animator.SetFloat("Horizontal", blackboard.lastHorizontal);
+            blackboard.animator.SetFloat("Horizontal", animHorizontal);
             blackboard.animator.SetFloat("Vertical", blackboard.moveDirection.y);
             blackboard.animator.SetFloat("Speed", blackboard.moveDirection.magnitude);
         }
@@ -123,6 +147,9 @@ public class Player_MoveState : IState
             Input.GetAxisRaw("Horizontal"),
             Input.GetAxisRaw("Vertical")
         ).normalized;
+
+        // 更新瞄准方向
+        blackboard.UpdateAimDirection();
 
         // 应用移动
         blackboard.rb.velocity = blackboard.moveDirection * blackboard.moveSpeed;
@@ -135,9 +162,6 @@ public class Player_MoveState : IState
 
         // 处理攻击输入
         HandleAttackInput();
-
-        // 更新瞄准方向
-        UpdateAimDirection();
     }
 
     private void HandleAttackInput()
@@ -149,16 +173,6 @@ public class Player_MoveState : IState
                 fsm.SwitchState(MY_FSM.StateType.Attack);
             }
         }
-    }
-
-    private void UpdateAimDirection()
-    {
-        // 获取鼠标位置并转换为世界坐标
-        Vector3 mousePosition = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        mousePosition.z = 0;
-
-        // 计算朝向鼠标的方向
-        blackboard.aimDirection = (mousePosition - blackboard.transform.position).normalized;
     }
 }
 
@@ -176,10 +190,12 @@ public class Player_AttackState : IState
 
     public void OnEnter()
     {
-
-        // 触发攻击动画
+        // 使用实时方向（鼠标瞄准方向）
         if (blackboard.animator)
         {
+            // 计算水平方向：如果鼠标在右侧则为1，左侧则为-1
+            float horizontal = blackboard.aimDirection.x > 0 ? 1f : -1f;
+            blackboard.animator.SetFloat("Horizontal", horizontal);
             blackboard.animator.SetTrigger("Attack");
         }
 
@@ -278,9 +294,7 @@ public class Player_FSM : MonoBehaviour
 
     void Start()
     {
-
         blackboard.animator = GetComponent<Animator>();
-
 
         // 初始化黑板
         if (blackboard == null) blackboard = new PlayerBlackboard();
@@ -350,13 +364,5 @@ public class Player_FSM : MonoBehaviour
     }
 
     // 调试绘制
-    //void OnDrawGizmos()
-    //{
-    //    if (blackboard != null && blackboard.aimDirection != Vector2.zero)
-    //    {
-    //        Gizmos.color = Color.red;
-    //        Vector3 endPoint = transform.position + (Vector3)blackboard.aimDirection * 2f;
-    //       Gizmos.DrawLine(transform.position, endPoint);
-    //    }
-    //}
+    
 }
