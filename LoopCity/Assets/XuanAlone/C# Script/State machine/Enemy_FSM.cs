@@ -96,7 +96,7 @@ public class Enemy_ExplodeState : IState
         }
 
         // 销毁敌人
-        GameObject.Destroy(blackboard.transform.gameObject, 0.2f);
+        GameObject.Destroy(blackboard.transform.gameObject);
     }
 
     public void OnExit() { }
@@ -108,6 +108,8 @@ public class Enemy_DashState : IState
     private FSM fsm;
     private EnemyBlackboard blackboard;
     private Vector2 dashDirection;
+    private Vector2 dashStartPosition;
+    private bool hasDamaged;
 
     public Enemy_DashState(FSM fsm)
     {
@@ -120,42 +122,61 @@ public class Enemy_DashState : IState
         // 设置冲刺方向（指向玩家）
         dashDirection = (blackboard.playerTransform.position -
                         blackboard.transform.position).normalized;
+        dashStartPosition = blackboard.transform.position;
         blackboard.isDashing = true;
-        blackboard.dashTimer = 0;
+        hasDamaged = false;
     }
 
     public void OnExit()
     {
         blackboard.isDashing = false;
+        blackboard.dashTimer = blackboard.dashCooldown; // 重置冷却计时器
     }
 
     public void OnUpdate()
     {
         // 冲刺移动
         blackboard.transform.Translate(
-            dashDirection * blackboard.chaseSpeed * 3 * Time.deltaTime,
+            dashDirection * blackboard.chaseSpeed * 5 * Time.deltaTime,
             Space.World
         );
-
-        // 检测碰撞玩家
-        float distance = Vector2.Distance(
-            blackboard.transform.position,
-            blackboard.playerTransform.position
-        );
-
-        if (distance < 0.5f) // 假设碰撞距离为0.5m
+        // 处理冲刺怪的冷却
+        if (blackboard.enemyType == EnemyBlackboard.EnemyType.Dasher)
         {
-            // 在冲刺怪状态中
-            PlayerHealth playerHealth = blackboard.playerTransform.GetComponent<PlayerHealth>();
-            if (playerHealth != null)
-                playerHealth.TakeDamage(blackboard.dashDamage);
+            if (blackboard.dashTimer > 0)
+            {
+                blackboard.dashTimer -= Time.deltaTime;
+            }
+        }
+        // 检测是否达到冲刺距离
+        float dashDistance = Vector2.Distance(dashStartPosition, blackboard.transform.position);
+        if (dashDistance >= blackboard.dashDistance)
+        {
+            // 冲刺结束后回到Idle状态
+            fsm.SwitchState(MY_FSM.StateType.Idle);
+            return;
         }
 
-        // 结束冲刺进入冷却
-        blackboard.dashTimer += Time.deltaTime;
-        if (blackboard.dashTimer >= blackboard.dashCooldown)
+        // 检测碰撞玩家（只在冲刺过程中检测一次）
+        if (!hasDamaged)
         {
-            fsm.SwitchState(MY_FSM.StateType.Idle);
+            float distance = Vector2.Distance(
+                blackboard.transform.position,
+                blackboard.playerTransform.position
+            );
+
+            if (distance < 0.5f)
+            {
+                PlayerHealth playerHealth = blackboard.playerTransform.GetComponent<PlayerHealth>();
+                if (playerHealth != null)
+                {
+                    playerHealth.TakeDamage(blackboard.dashDamage);
+                    hasDamaged = true;
+
+                    // 冲刺怪碰到玩家后自身销毁
+                    GameObject.Destroy(blackboard.transform.gameObject);
+                }
+            }
         }
     }
 }
@@ -563,7 +584,14 @@ public class Enemy_ChaseState : IState
         this.blackboard = fsm.blackboard as EnemyBlackboard;
     }
 
-    public void OnEnter() { }
+    public void OnEnter()
+    {
+        // 进入追击状态时重置冲刺计时器（针对冲刺怪）
+        if (blackboard.enemyType == EnemyBlackboard.EnemyType.Dasher)
+        {
+            blackboard.dashTimer = 0;
+        }
+    }
 
     public void OnExit() { }
 
@@ -592,22 +620,30 @@ public class Enemy_ChaseState : IState
             return;
         }
 
-        // 如果玩家在攻击范围内，切换到攻击状态（可选）
-        
-        if (distanceToPlayer <= blackboard.attackDistance)
-        {
-            fsm.SwitchState(MY_FSM.StateType.Attack);
-            return;
-        }
-
         // 根据怪物类型执行不同行为
         switch (blackboard.enemyType)
         {
-            // ... 其他类型处理 ...
+            case EnemyBlackboard.EnemyType.Exploder:
+                HandleExploder(playerPosition, distanceToPlayer);
+                break;
+
+            case EnemyBlackboard.EnemyType.Dasher:
+                HandleDasher(playerPosition, distanceToPlayer);
+                break;
 
             case EnemyBlackboard.EnemyType.Shooter:
                 HandleShooter();
                 break;
+        }
+    }
+
+    private void HandleExploder(Vector2 playerPosition, float distance)
+    {
+        // 如果进入爆炸距离，切换到爆炸状态
+        if (distance <= blackboard.attackDistance)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Explode);
+            return;
         }
 
         // 向玩家移动
@@ -617,9 +653,35 @@ public class Enemy_ChaseState : IState
             blackboard.chaseSpeed * Time.deltaTime
         );
     }
+
+    private void HandleDasher(Vector2 playerPosition, float distance)
+    {
+        // 如果进入冲刺范围且冷却结束，切换到冲刺状态
+        if (distance <= blackboard.attackDistance &&
+            !blackboard.isDashing &&
+            blackboard.dashTimer <= 0)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Dash);
+            return;
+        }
+
+        // 更新冲刺冷却计时
+        if (blackboard.dashTimer > 0)
+        {
+            blackboard.dashTimer -= Time.deltaTime;
+        }
+
+        // 向玩家移动
+        blackboard.transform.position = Vector2.MoveTowards(
+            blackboard.transform.position,
+            playerPosition,
+            blackboard.chaseSpeed * Time.deltaTime
+        );
+    }
+
     private void HandleShooter()
     {
-        // 射手怪在追击状态下直接切换到射手移动状态
+        // 射手怪直接切换到射手移动状态
         fsm.SwitchState(MY_FSM.StateType.ShooterMove);
     }
 }
@@ -633,6 +695,35 @@ public class Enemy_FSM : MonoBehaviour
     {
         // 使用专用初始化方法
         InitializeFSM();
+
+        // 初始化黑板数据
+        blackboard.transform = transform;
+        blackboard.currentHealth = blackboard.maxHealth;
+
+        // 查找玩家
+        GameObject player = GameObject.FindGameObjectWithTag("Player");
+        if (player != null)
+            blackboard.playerTransform = player.transform;
+        else
+            Debug.LogError("Player not found!");
+
+        // 初始化状态机
+        fsm = new FSM(blackboard);
+
+        // 添加公共状态
+        fsm.AddState(MY_FSM.StateType.Idle, new Enemy_IdleState(fsm));
+        fsm.AddState(MY_FSM.StateType.Move, new Enemy_MoveState(fsm));
+        fsm.AddState(MY_FSM.StateType.Chase, new Enemy_ChaseState(fsm));
+        fsm.AddState(MY_FSM.StateType.Die, new Enemy_DieState(fsm));
+
+        // 添加特定怪物状态
+        fsm.AddState(MY_FSM.StateType.Explode, new Enemy_ExplodeState(fsm));
+        fsm.AddState(MY_FSM.StateType.Dash, new Enemy_DashState(fsm));
+        fsm.AddState(MY_FSM.StateType.ShooterMove, new Enemy_ShooterMoveState(fsm));
+        fsm.AddState(MY_FSM.StateType.Shoot, new Enemy_ShootState(fsm));
+
+        // 初始状态
+        fsm.SwitchState(MY_FSM.StateType.Idle);
 
         // 设置碰撞层
         if (LayerMask.NameToLayer("Enemy") != -1)
@@ -663,10 +754,7 @@ public class Enemy_FSM : MonoBehaviour
         gameObject.layer = LayerMask.NameToLayer("Enemy");
 
 
-        // 查找玩家
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
-            blackboard.playerTransform = player.transform;
+        
 
         // 初始化状态机
         fsm = new FSM(blackboard);
