@@ -10,14 +10,12 @@ using Random = UnityEngine.Random;
 #region  敌人黑板
 public class EnemyBlackboard : Blackboard
 {
-    // 修改：移除 playExplosionOnDeath 字段
     [Header("动画参数")]
     public string moveAnimParam = "IsMoving";
     public string explodeTriggerParam = "Explode";
-    public string dieTriggerParam = "Die"; // 新增死亡动画触发器
+    public string dieTriggerParam = "Die"; // 死亡动画触发器
     public bool hasExplodeAnimation = true;
     public bool hasDieAnimation = true;   // 新增死亡动画标志
-
 
     [Header("动画引用")]
     public Animator animator;
@@ -400,6 +398,7 @@ public class Enemy_ShooterMoveState : IState
 
     public void OnUpdate()
     {
+        // 死亡检查 - 放在最前面
         if (blackboard.currentHealth <= 0)
         {
             fsm.SwitchState(MY_FSM.StateType.Die);
@@ -472,6 +471,7 @@ public class Enemy_ShootState : IState
 
     public void OnUpdate()
     {
+        // 死亡检查 - 放在最前面
         if (blackboard.currentHealth <= 0)
         {
             fsm.SwitchState(MY_FSM.StateType.Die);
@@ -541,6 +541,7 @@ public class Enemy_DieState : IState
     private EnemyBlackboard blackboard;
     private float deathTimer;
     private bool deathAnimationStarted;
+    private float deathAnimationLength = 1.0f; // 默认死亡动画长度
 
     public Enemy_DieState(FSM fsm)
     {
@@ -565,64 +566,58 @@ public class Enemy_DieState : IState
             rb.simulated = false;
         }
 
-        // 特殊处理：如果是爆炸怪，播放死亡动画而非爆炸动画
-        if (blackboard.enemyType == EnemyBlackboard.EnemyType.Exploder)
-        {
-            PlayDeathAnimation();
-        }
-        else
-        {
-            PlayStandardDeathAnimation();
-        }
+        // 播放死亡动画
+        PlayDeathAnimation();
     }
 
     private void PlayDeathAnimation()
     {
-        // 爆炸怪死亡时播放死亡动画
-        if (blackboard.animator != null && blackboard.hasDieAnimation)
+        // 优先使用配置的死亡触发器
+        if (blackboard.animator != null && !string.IsNullOrEmpty(blackboard.dieTriggerParam))
         {
             if (HasAnimationTrigger(blackboard.dieTriggerParam))
             {
                 blackboard.animator.SetTrigger(blackboard.dieTriggerParam);
                 deathAnimationStarted = true;
+                deathAnimationLength = GetAnimationLength(blackboard.dieTriggerParam);
             }
-            else if (HasAnimationState("Die"))
+            else if (HasAnimationState(blackboard.dieTriggerParam))
             {
-                blackboard.animator.Play("Die");
+                blackboard.animator.Play(blackboard.dieTriggerParam);
                 deathAnimationStarted = true;
+                deathAnimationLength = GetAnimationLength(blackboard.dieTriggerParam);
             }
         }
 
-        if (!deathAnimationStarted)
+        // 如果没有配置特定触发器，尝试通用方法
+        if (!deathAnimationStarted && blackboard.animator != null)
         {
-            Debug.LogWarning("没有找到爆炸怪的死亡动画");
-            GameObject.Destroy(blackboard.transform.gameObject);
-        }
-    }
-
-    private void PlayStandardDeathAnimation()
-    {
-        // 其他敌人的标准死亡处理
-        if (blackboard.animator != null)
-        {
+            // 尝试使用"Die"触发器
             if (HasAnimationTrigger("Die"))
             {
                 blackboard.animator.SetTrigger("Die");
                 deathAnimationStarted = true;
+                deathAnimationLength = GetAnimationLength("Die");
             }
+            // 尝试播放"Die"动画状态
             else if (HasAnimationState("Die"))
             {
                 blackboard.animator.Play("Die");
                 deathAnimationStarted = true;
+                deathAnimationLength = GetAnimationLength("Die");
             }
-            else
+            // 尝试播放"Death"动画状态
+            else if (HasAnimationState("Death"))
             {
-                Debug.LogWarning("没有找到死亡动画");
+                blackboard.animator.Play("Death");
+                deathAnimationStarted = true;
+                deathAnimationLength = GetAnimationLength("Death");
             }
         }
 
         if (!deathAnimationStarted)
         {
+            Debug.LogWarning("没有找到死亡动画，将直接销毁敌人");
             GameObject.Destroy(blackboard.transform.gameObject);
         }
     }
@@ -635,11 +630,8 @@ public class Enemy_DieState : IState
         {
             deathTimer += Time.deltaTime;
 
-            // 获取动画长度（假设死亡动画大约1秒）
-            float animationLength = GetAnimationLength("Die");
-
             // 动画结束后销毁
-            if (deathTimer >= animationLength)
+            if (deathTimer >= deathAnimationLength)
             {
                 GameObject.Destroy(blackboard.transform.gameObject);
             }
@@ -681,7 +673,7 @@ public class Enemy_DieState : IState
     // 获取动画长度
     private float GetAnimationLength(string stateName)
     {
-        if (blackboard.animator == null) return 1.0f; // 默认1秒
+        if (blackboard.animator == null) return 1.0f;
 
         var controller = blackboard.animator.runtimeAnimatorController;
         if (controller == null) return 1.0f;
@@ -693,7 +685,7 @@ public class Enemy_DieState : IState
                 return clip.length;
             }
         }
-        return 1.0f; // 默认1秒
+        return 1.0f;
     }
 }
 #endregion
@@ -1118,20 +1110,10 @@ public class Enemy_FSM : MonoBehaviour
             }
         }
 
-        // 检查是否有爆炸动画
-        if (blackboard.animator != null)
-        {
-            blackboard.hasExplodeAnimation =
-                HasAnimationTrigger(blackboard.explodeTriggerParam) ||
-                HasAnimationState("Explode");
-        }
-
         // 解决怪物碰撞问题：设置怪物物理层
         if (LayerMask.NameToLayer("Enemy") != -1)
         {
             gameObject.layer = LayerMask.NameToLayer("Enemy");
-
-            // 确保怪物不会阻挡其他怪物
             Physics2D.IgnoreLayerCollision(
                 LayerMask.NameToLayer("Enemy"),
                 LayerMask.NameToLayer("Enemy"),
@@ -1141,20 +1123,6 @@ public class Enemy_FSM : MonoBehaviour
         else
         {
             Debug.LogWarning("'Enemy' layer not defined. Creating it.");
-        }
-
-        // 确保 animator 被赋值
-        if (blackboard.animator == null)
-        {
-            blackboard.animator = GetComponent<Animator>();
-            if (blackboard.animator == null)
-            {
-                Debug.LogError("Animator component not found on enemy: " + gameObject.name);
-            }
-            else
-            {
-                Debug.Log("Animator assigned automatically");
-            }
         }
     }
 
@@ -1273,7 +1241,6 @@ public class Enemy_FSM : MonoBehaviour
 
         if (blackboard.currentHealth <= 0)
         {
-            // 所有敌人都进入死亡状态（包括爆炸怪）
             fsm.SwitchState(MY_FSM.StateType.Die);
         }
     }
