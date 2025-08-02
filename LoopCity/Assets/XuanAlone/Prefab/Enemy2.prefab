@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6865046281073338055}
   - component: {fileID: 5279300556225041367}
+  - component: {fileID: -5865423155776760934}
   - component: {fileID: 9169211392682843152}
   - component: {fileID: 898587283198629996}
   - component: {fileID: 372034535092372505}
@@ -89,6 +90,20 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &-5865423155776760934
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 212753576408972118}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a23cd98a319b9548a9a140f5215b1d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 100
+  deathEffect: {fileID: 0}
 --- !u!114 &9169211392682843152
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -104,8 +119,9 @@ MonoBehaviour:
   blackboard:
     moveAnimParam: IsMoving
     explodeTriggerParam: Explode
+    dieTriggerParam: Die
     hasExplodeAnimation: 0
-    playExplosionOnDeath: 0
+    hasDieAnimation: 1
     animator: {fileID: 3298835299504531063}
     enemyType: 1
     explosionRadius: 1
