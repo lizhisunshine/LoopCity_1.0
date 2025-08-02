@@ -100,6 +100,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blackboard:
+    moveAnimParam: IsMoving
+    explodeTriggerParam: Explode
+    hasExplodeAnimation: 0
+    playExplosionOnDeath: 0
+    animator: {fileID: 0}
     enemyType: 2
     explosionRadius: 1
     explosionDamage: 20

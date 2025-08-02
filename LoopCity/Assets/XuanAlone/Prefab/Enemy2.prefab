@@ -102,6 +102,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blackboard:
+    moveAnimParam: IsMoving
+    explodeTriggerParam: Explode
+    hasExplodeAnimation: 0
+    playExplosionOnDeath: 0
     animator: {fileID: 3298835299504531063}
     enemyType: 1
     explosionRadius: 1
@@ -118,7 +122,7 @@ MonoBehaviour:
     projectilePrefab: {fileID: 0}
     attackTimer: 0
     idealPosition: {x: 0, y: 0}
-    maxHealth: 100
+    maxHealth: 30
     idleTime: 2
     moveSpeed: 0.25
     chaseSpeed: 2

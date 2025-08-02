@@ -10,6 +10,14 @@ using Random = UnityEngine.Random;
 #region  敌人黑板
 public class EnemyBlackboard : Blackboard
 {
+    // 在 EnemyBlackboard 类中添加
+    [Header("动画参数")]
+    public string moveAnimParam = "IsMoving";
+    public string explodeTriggerParam = "Explode";
+    public bool hasExplodeAnimation = true;
+    public bool playExplosionOnDeath = true; // 新增：死亡时播放爆炸动画
+
+
     [Header("动画引用")]
     public Animator animator;
 
@@ -61,6 +69,10 @@ public class Enemy_ExplodeState : IState
 {
     private FSM fsm;
     private EnemyBlackboard blackboard;
+    private bool hasExploded;
+    private bool isDeathExplosion; // 标记是否为死亡爆炸
+    private float explosionTimer;
+    private float explosionAnimationLength = 0.5f; // 默认爆炸动画长度
 
     public Enemy_ExplodeState(FSM fsm)
     {
@@ -80,7 +92,50 @@ public class Enemy_ExplodeState : IState
     public void OnEnter()
     {
         Debug.Log("Exploding!");
+        hasExploded = false;
+        explosionTimer = 0f;
 
+        // 检测是否是死亡爆炸（没有主动接触玩家）
+        isDeathExplosion = (fsm.prevStateType != MY_FSM.StateType.Chase);
+
+        // 播放爆炸动画
+        if (blackboard.animator != null && blackboard.hasExplodeAnimation)
+        {
+            // 尝试使用触发器
+            if (HasAnimationTrigger(blackboard.explodeTriggerParam))
+            {
+                blackboard.animator.SetTrigger(blackboard.explodeTriggerParam);
+            }
+            // 尝试直接播放动画
+            else if (HasAnimationState("Explode"))
+            {
+                blackboard.animator.Play("Explode");
+            }
+
+            // 获取动画长度
+            explosionAnimationLength = GetAnimationLength("Explode");
+        }
+
+        // 禁用碰撞体
+        Collider2D collider = blackboard.transform.GetComponent<Collider2D>();
+        if (collider != null) collider.enabled = false;
+
+        // 停止移动
+        if (blackboard.transform.TryGetComponent<Rigidbody2D>(out var rb))
+        {
+            rb.velocity = Vector2.zero;
+            rb.simulated = false;
+        }
+
+        // 如果是主动爆炸（接触玩家），执行爆炸伤害
+        if (!isDeathExplosion)
+        {
+            Explode();
+        }
+    }
+
+    private void Explode()
+    {
         Collider2D[] hits = Physics2D.OverlapCircleAll(
             blackboard.transform.position,
             blackboard.explosionRadius
@@ -96,13 +151,80 @@ public class Enemy_ExplodeState : IState
             }
         }
 
-        GameObject.Destroy(blackboard.transform.gameObject);
+        hasExploded = true;
     }
 
     public void OnExit() { }
-    public void OnUpdate() { }
+
+    public void OnUpdate()
+    {
+        explosionTimer += Time.deltaTime;
+
+        // 如果是死亡爆炸，标记为已爆炸（不执行伤害）
+        if (isDeathExplosion && !hasExploded && explosionTimer > 0.1f)
+        {
+            hasExploded = true;
+        }
+
+        // 动画播放完毕后销毁
+        if (explosionTimer >= explosionAnimationLength)
+        {
+            GameObject.Destroy(blackboard.transform.gameObject);
+        }
+    }
+
+
+    // 检查动画触发器是否存在
+    private bool HasAnimationTrigger(string triggerName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.type == AnimatorControllerParameterType.Trigger &&
+                param.name == triggerName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 检查是否有特定名称的动画状态
+    private bool HasAnimationState(string stateName)
+    {
+        if (blackboard.animator == null) return false;
+
+        var controller = blackboard.animator.runtimeAnimatorController;
+        if (controller == null) return false;
+
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip.name == stateName)
+                return true;
+        }
+        return false;
+    }
+
+    // 获取动画长度
+    private float GetAnimationLength(string stateName)
+    {
+        if (blackboard.animator == null) return explosionAnimationLength;
+
+        var controller = blackboard.animator.runtimeAnimatorController;
+        if (controller == null) return explosionAnimationLength;
+
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip.name == stateName)
+            {
+                return clip.length;
+            }
+        }
+        return explosionAnimationLength;
+    }
 }
-#endregion
+#endregion#region  冲刺怪
 
 #region  冲刺怪
 public class Enemy_DashState : IState
@@ -452,6 +574,18 @@ public class Enemy_DieState : IState
             rb.simulated = false;
         }
 
+
+        Debug.Log("Enemy died!");
+
+        // 如果是爆炸怪且设置了死亡时播放爆炸动画，切换到爆炸状态
+        if (blackboard.enemyType == EnemyBlackboard.EnemyType.Exploder &&
+            blackboard.playExplosionOnDeath)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Explode);
+            return;
+        }
+
+
         // 触发死亡动画
         if (blackboard.animator != null)
         {
@@ -568,6 +702,14 @@ public class Enemy_IdleState : IState
     public void OnEnter()
     {
         idleTimer = 0;
+
+        // 设置移动动画为 false
+
+        if (blackboard.animator != null &&
+            HasAnimationParameter(blackboard.moveAnimParam))
+        {
+            blackboard.animator.SetBool(blackboard.moveAnimParam, false);
+        }
 
         // 设置默认的Idle动画
         if (blackboard.animator != null)
@@ -730,9 +872,23 @@ public class Enemy_MoveState : IState
         {
             blackboard.animator.SetBool("IsMoving", true);
         }
+        // 设置移动动画
+        if (blackboard.animator != null &&
+            HasAnimationParameter(blackboard.moveAnimParam))
+        {
+            blackboard.animator.SetBool(blackboard.moveAnimParam, true);
+        }
     }
 
-    public void OnExit() { }
+    public void OnExit() 
+    {
+        // 退出时设置移动动画为 false
+        if (blackboard.animator != null &&
+            HasAnimationParameter(blackboard.moveAnimParam))
+        {
+            blackboard.animator.SetBool(blackboard.moveAnimParam, false);
+        }
+    }
 
     public void OnUpdate()
     {
@@ -799,6 +955,13 @@ public class Enemy_ChaseState : IState
 
     public void OnEnter()
     {
+        // 设置移动动画
+        if (blackboard.animator != null &&
+            HasAnimationParameter(blackboard.moveAnimParam))
+        {
+            blackboard.animator.SetBool(blackboard.moveAnimParam, true);
+        }
+
         if (blackboard.enemyType == EnemyBlackboard.EnemyType.Dasher)
         {
             blackboard.dashTimer = Mathf.Max(0, blackboard.dashTimer);
@@ -826,7 +989,15 @@ public class Enemy_ChaseState : IState
         return false;
     }
 
-    public void OnExit() { }
+    public void OnExit() 
+    {
+        // 退出时设置移动动画为 false
+        if (blackboard.animator != null &&
+            HasAnimationParameter(blackboard.moveAnimParam))
+        {
+            blackboard.animator.SetBool(blackboard.moveAnimParam, false);
+        }
+    }
 
     public void OnUpdate()
     {
@@ -923,6 +1094,25 @@ public class Enemy_FSM : MonoBehaviour
     void Start()
     {
         InitializeFSM();
+
+        // 确保 animator 被赋值
+        if (blackboard.animator == null)
+        {
+            blackboard.animator = GetComponent<Animator>();
+            if (blackboard.animator == null)
+            {
+                Debug.LogError("Animator component not found on enemy: " + gameObject.name);
+            }
+        }
+
+        // 检查是否有爆炸动画
+        if (blackboard.animator != null)
+        {
+            blackboard.hasExplodeAnimation =
+                HasAnimationTrigger(blackboard.explodeTriggerParam) ||
+                HasAnimationState("Explode");
+        }
+
         // 解决怪物碰撞问题：设置怪物物理层
         if (LayerMask.NameToLayer("Enemy") != -1)
         {
@@ -953,6 +1143,38 @@ public class Enemy_FSM : MonoBehaviour
                 Debug.Log("Animator assigned automatically");
             }
         }
+    }
+
+    // 检查动画触发器是否存在
+    private bool HasAnimationTrigger(string triggerName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.type == AnimatorControllerParameterType.Trigger &&
+                param.name == triggerName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 检查是否有特定名称的动画状态
+    private bool HasAnimationState(string stateName)
+    {
+        if (blackboard.animator == null) return false;
+
+        var controller = blackboard.animator.runtimeAnimatorController;
+        if (controller == null) return false;
+
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip.name == stateName)
+                return true;
+        }
+        return false;
     }
 
     private void InitializeFSM()
@@ -1038,8 +1260,16 @@ public class Enemy_FSM : MonoBehaviour
 
         if (blackboard.currentHealth <= 0)
         {
-            if (fsm != null)
+            // 如果是爆炸怪且设置了死亡时播放爆炸动画
+            if (blackboard.enemyType == EnemyBlackboard.EnemyType.Exploder &&
+                blackboard.playExplosionOnDeath)
             {
+                // 切换到爆炸状态而不是死亡状态
+                fsm.SwitchState(MY_FSM.StateType.Explode);
+            }
+            else
+            {
+                // 其他敌人正常进入死亡状态
                 fsm.SwitchState(MY_FSM.StateType.Die);
             }
         }
