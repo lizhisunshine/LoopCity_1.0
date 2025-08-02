@@ -10,12 +10,13 @@ using Random = UnityEngine.Random;
 #region  敌人黑板
 public class EnemyBlackboard : Blackboard
 {
-    // 在 EnemyBlackboard 类中添加
+    // 修改：移除 playExplosionOnDeath 字段
     [Header("动画参数")]
     public string moveAnimParam = "IsMoving";
     public string explodeTriggerParam = "Explode";
+    public string dieTriggerParam = "Die"; // 新增死亡动画触发器
     public bool hasExplodeAnimation = true;
-    public bool playExplosionOnDeath = true; // 新增：死亡时播放爆炸动画
+    public bool hasDieAnimation = true;   // 新增死亡动画标志
 
 
     [Header("动画引用")]
@@ -91,28 +92,21 @@ public class Enemy_ExplodeState : IState
 
     public void OnEnter()
     {
-        Debug.Log("Exploding!");
+        Debug.Log("主动爆炸攻击!");
         hasExploded = false;
         explosionTimer = 0f;
 
-        // 检测是否是死亡爆炸（没有主动接触玩家）
-        isDeathExplosion = (fsm.prevStateType != MY_FSM.StateType.Chase);
-
-        // 播放爆炸动画
+        // 只播放爆炸动画（主动攻击）
         if (blackboard.animator != null && blackboard.hasExplodeAnimation)
         {
-            // 尝试使用触发器
             if (HasAnimationTrigger(blackboard.explodeTriggerParam))
             {
                 blackboard.animator.SetTrigger(blackboard.explodeTriggerParam);
             }
-            // 尝试直接播放动画
             else if (HasAnimationState("Explode"))
             {
                 blackboard.animator.Play("Explode");
             }
-
-            // 获取动画长度
             explosionAnimationLength = GetAnimationLength("Explode");
         }
 
@@ -127,11 +121,8 @@ public class Enemy_ExplodeState : IState
             rb.simulated = false;
         }
 
-        // 如果是主动爆炸（接触玩家），执行爆炸伤害
-        if (!isDeathExplosion)
-        {
-            Explode();
-        }
+        // 总是执行爆炸伤害（主动攻击）
+        Explode();
     }
 
     private void Explode()
@@ -559,7 +550,7 @@ public class Enemy_DieState : IState
 
     public void OnEnter()
     {
-        Debug.Log("Enemy died!");
+        Debug.Log("敌人死亡!");
         deathTimer = 0f;
         deathAnimationStarted = false;
 
@@ -574,16 +565,51 @@ public class Enemy_DieState : IState
             rb.simulated = false;
         }
 
-        // 触发死亡动画
+        // 特殊处理：如果是爆炸怪，播放死亡动画而非爆炸动画
+        if (blackboard.enemyType == EnemyBlackboard.EnemyType.Exploder)
+        {
+            PlayDeathAnimation();
+        }
+        else
+        {
+            PlayStandardDeathAnimation();
+        }
+    }
+
+    private void PlayDeathAnimation()
+    {
+        // 爆炸怪死亡时播放死亡动画
+        if (blackboard.animator != null && blackboard.hasDieAnimation)
+        {
+            if (HasAnimationTrigger(blackboard.dieTriggerParam))
+            {
+                blackboard.animator.SetTrigger(blackboard.dieTriggerParam);
+                deathAnimationStarted = true;
+            }
+            else if (HasAnimationState("Die"))
+            {
+                blackboard.animator.Play("Die");
+                deathAnimationStarted = true;
+            }
+        }
+
+        if (!deathAnimationStarted)
+        {
+            Debug.LogWarning("没有找到爆炸怪的死亡动画");
+            GameObject.Destroy(blackboard.transform.gameObject);
+        }
+    }
+
+    private void PlayStandardDeathAnimation()
+    {
+        // 其他敌人的标准死亡处理
         if (blackboard.animator != null)
         {
-            // 尝试使用触发器
             if (HasAnimationTrigger("Die"))
             {
                 blackboard.animator.SetTrigger("Die");
                 deathAnimationStarted = true;
             }
-            // 尝试直接播放死亡动画
             else if (HasAnimationState("Die"))
             {
                 blackboard.animator.Play("Die");
@@ -591,11 +617,10 @@ public class Enemy_DieState : IState
             }
             else
             {
-                Debug.LogWarning("No death animation found for enemy");
+                Debug.LogWarning("没有找到死亡动画");
             }
         }
 
-        // 如果没有动画，直接销毁
         if (!deathAnimationStarted)
         {
             GameObject.Destroy(blackboard.transform.gameObject);
@@ -1244,22 +1269,12 @@ public class Enemy_FSM : MonoBehaviour
         blackboard.currentHealth -= damage;
         blackboard.currentHealth = Mathf.Max(blackboard.currentHealth, 0);
 
-        Debug.Log($"Enemy took {damage} damage! Health: {blackboard.currentHealth}/{blackboard.maxHealth}");
+        Debug.Log($"敌人受到 {damage} 伤害! 生命: {blackboard.currentHealth}/{blackboard.maxHealth}");
 
         if (blackboard.currentHealth <= 0)
         {
-            // 如果是爆炸怪且设置了死亡时播放爆炸动画
-            if (blackboard.enemyType == EnemyBlackboard.EnemyType.Exploder &&
-                blackboard.playExplosionOnDeath)
-            {
-                // 切换到爆炸状态而不是死亡状态
-                fsm.SwitchState(MY_FSM.StateType.Explode);
-            }
-            else
-            {
-                // 其他敌人正常进入死亡状态
-                fsm.SwitchState(MY_FSM.StateType.Die);
-            }
+            // 所有敌人都进入死亡状态（包括爆炸怪）
+            fsm.SwitchState(MY_FSM.StateType.Die);
         }
     }
 
