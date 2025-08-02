@@ -44,6 +44,7 @@ namespace MY_FSM
         // Ìí¼Ó prevState Ö§³Ö
         public IState prevState;
         public StateType prevStateType;
+        internal StateType curStateType;
 
         public FSM(Blackboard blackboard)
         {
