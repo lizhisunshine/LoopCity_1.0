@@ -928,6 +928,10 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6680764230655726957, guid: ffbb0cc389c7768489af00977f37d052, type: 3}
+      propertyPath: blackboard.chaseSpeed
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6680764230655726957, guid: ffbb0cc389c7768489af00977f37d052, type: 3}
       propertyPath: blackboard.playerTransform
       value: 
       objectReference: {fileID: 346725612}
