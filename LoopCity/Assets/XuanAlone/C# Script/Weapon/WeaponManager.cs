@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using TMPro; // 添加TextMeshPro命名空间
+using TMPro;
 
 public enum WeaponType { MagicWand, EnergyBlaster, FrostScepter }
 
@@ -14,9 +14,9 @@ public class WeaponManager : MonoBehaviour
     public GameObject frostScepter;
 
     [Header("UI Elements")]
-    public Image weaponIcon; // Image组件不变
-    public TMP_Text weaponName; // 改为TMP_Text
-    public TMP_Text keyHint; // 改为TMP_Text
+    public Image weaponIcon;
+    public TMP_Text weaponName;
+    public TMP_Text keyHint;
 
     [Header("Weapon Sprites")]
     public Sprite wandSprite;
@@ -36,12 +36,27 @@ public class WeaponManager : MonoBehaviour
             { WeaponType.FrostScepter, frostScepter }
         };
 
+        // 禁用所有武器
+        DisableAllWeapons();
+
         // 激活初始武器
         SwitchWeapon(currentWeapon);
         UpdateUI();
 
         // 设置按键提示
         keyHint.text = "E";
+    }
+
+    // 禁用所有武器
+    private void DisableAllWeapons()
+    {
+        foreach (var weapon in weaponObjects.Values)
+        {
+            if (weapon != null)
+            {
+                weapon.SetActive(false);
+            }
+        }
     }
 
     void Update()
@@ -72,16 +87,22 @@ public class WeaponManager : MonoBehaviour
     private void SwitchWeapon(WeaponType newWeapon)
     {
         // 禁用当前武器
-        weaponObjects[currentWeapon].SetActive(false);
+        if (weaponObjects.ContainsKey(currentWeapon) && weaponObjects[currentWeapon] != null)
+        {
+            weaponObjects[currentWeapon].SetActive(false);
+        }
 
         // 启用新武器
         currentWeapon = newWeapon;
-        weaponObjects[currentWeapon].SetActive(true);
+        if (weaponObjects.ContainsKey(currentWeapon) && weaponObjects[currentWeapon] != null)
+        {
+            weaponObjects[currentWeapon].SetActive(true);
+        }
 
         // 更新UI
         UpdateUI();
 
-        // 添加切换效果（可选）
+        // 添加切换效果
         StartCoroutine(WeaponSwitchEffect());
     }
 
@@ -92,12 +113,12 @@ public class WeaponManager : MonoBehaviour
             case WeaponType.MagicWand:
                 weaponIcon.sprite = wandSprite;
                 weaponName.text = "Magic Wand";
-                weaponName.color = new Color(1f, 0.95f, 0.4f); 
+                weaponName.color = new Color(1f, 0.95f, 0.4f);
                 break;
             case WeaponType.EnergyBlaster:
                 weaponIcon.sprite = blasterSprite;
                 weaponName.text = "Magic Book";
-                weaponName.color = new Color(0.2f, 0.8f, 1f); 
+                weaponName.color = new Color(0.2f, 0.8f, 1f);
                 break;
             case WeaponType.FrostScepter:
                 weaponIcon.sprite = scepterSprite;
@@ -106,7 +127,7 @@ public class WeaponManager : MonoBehaviour
                 break;
         }
 
-        // 添加文本效果（可选）
+        // 添加文本效果
         weaponName.fontStyle = FontStyles.Bold;
         weaponName.alignment = TextAlignmentOptions.Center;
     }
