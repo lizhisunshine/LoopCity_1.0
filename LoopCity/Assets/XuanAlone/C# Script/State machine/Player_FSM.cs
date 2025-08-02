@@ -6,6 +6,8 @@ using static UnityEditor.Rendering.CoreEditorDrawer<TData>;
 
 // Ö÷½ÇºÚ°åÊý¾Ý
 [Serializable]
+
+#region  Íæ¼ÒºÚ°å
 public class PlayerBlackboard : Blackboard
 {
     [Header("×é¼þÒýÓÃ")]
@@ -47,7 +49,9 @@ public class PlayerBlackboard : Blackboard
         aimDirection = (mousePosition - transform.position).normalized;
     }
 }
+#endregion
 
+#region  ´ý»ú×´Ì¬
 // ´ý»ú×´Ì¬
 public class Player_IdleState : IState
 {
@@ -112,7 +116,9 @@ public class Player_IdleState : IState
         }
     }
 }
+#endregion
 
+#region  ÒÆ¶¯×´Ì¬
 // ÒÆ¶¯×´Ì¬
 public class Player_MoveState : IState
 {
@@ -190,7 +196,9 @@ public class Player_MoveState : IState
         }
     }
 }
+#endregion
 
+#region ¹¥»÷×´Ì¬
 // ¹¥»÷×´Ì¬
 public class Player_AttackState : IState
 {
@@ -276,7 +284,9 @@ public class Player_AttackState : IState
         }
     }
 }
+#endregion
 
+#region  ËÀÍö×´Ì¬
 // ËÀÍö×´Ì¬
 public class Player_DieState : IState
 {
@@ -323,8 +333,9 @@ public class Player_DieState : IState
     
     }
 }
+#endregion
 
-
+#region  Ö÷½ÇFSMÐÐÎªÀà
 // Ö÷½Ç×´Ì¬»ú¿ØÖÆÆ÷
 public class Player_FSM : MonoBehaviour
 {
@@ -507,3 +518,4 @@ public class Player_FSM : MonoBehaviour
         }
     }
 }
+#endregion

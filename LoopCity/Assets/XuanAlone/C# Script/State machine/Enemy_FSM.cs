@@ -6,6 +6,8 @@ using System;
 using Random = UnityEngine.Random;
 
 [Serializable]
+
+#region  µĞÈËºÚ°å
 public class EnemyBlackboard : Blackboard
 {
     // Ìí¼Ó¹ÖÎïÀàĞÍÃ¶¾Ù
@@ -50,7 +52,9 @@ public class EnemyBlackboard : Blackboard
     public float currentHealth;
     public Vector2 targetPos;
 }
+#endregion
 
+#region  ±¬Õ¨¹Ö
 public class Enemy_ExplodeState : IState
 {
     private FSM fsm;
@@ -102,7 +106,9 @@ public class Enemy_ExplodeState : IState
     public void OnExit() { }
     public void OnUpdate() { }
 }
+#endregion
 
+#region  ³å´Ì¹Ö
 public class Enemy_DashState : IState
 {
     private FSM fsm;
@@ -180,7 +186,9 @@ public class Enemy_DashState : IState
         }
     }
 }
+#endregion
 
+#region  ÉäÊÖ¹Ö
 // ÉäÊÖ¹ÖÒÆ¶¯×´Ì¬
 public class Enemy_ShooterMoveState : IState
 {
@@ -334,8 +342,9 @@ public class Enemy_ShootState : IState
         }
     }
 }
+#endregion
 
-
+#region  ËÀÍö×´Ì¬
 // ËÀÍö×´Ì¬
 public class Enemy_DieState : IState
 {
@@ -361,7 +370,9 @@ public class Enemy_DieState : IState
 
     public void OnUpdate() { }
 }
+#endregion
 
+#region  ´ı»ú×´Ì¬
 // ´ı»ú×´Ì¬
 public class Enemy_IdleState : IState
 {
@@ -507,8 +518,9 @@ public class Enemy_IdleState : IState
         );
     }
 }
+#endregion
 
-
+#region  ÒÆ¶¯×´Ì¬
 // ÒÆ¶¯×´Ì¬£¨ÓÎ×ß£©
 public class Enemy_MoveState : IState
 {
@@ -571,7 +583,9 @@ public class Enemy_MoveState : IState
         }
     }
 }
+#endregion
 
+#region  ×·»÷×´Ì¬
 // ×·»÷×´Ì¬£¨ĞÂÌí¼Ó£©
 public class Enemy_ChaseState : IState
 {
@@ -685,7 +699,9 @@ public class Enemy_ChaseState : IState
         fsm.SwitchState(MY_FSM.StateType.ShooterMove);
     }
 }
+#endregion
 
+#region  ¹ÖÎïFSMĞĞÎªÀà
 public class Enemy_FSM : MonoBehaviour
 {
     private FSM fsm;
@@ -903,3 +919,5 @@ public class Enemy_FSM : MonoBehaviour
     }
 
 }
+
+#endregion
