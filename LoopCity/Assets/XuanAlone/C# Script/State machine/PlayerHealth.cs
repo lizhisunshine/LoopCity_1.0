@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -13,7 +11,8 @@ public class PlayerHealth : MonoBehaviour
 
     void Start()
     {
-        currentHealth = maxHealth;
+        // 确保当前血量不会低于0
+        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
     }
 
     public void TakeDamage(float damage)

@@ -499,6 +499,7 @@ public class Player_FSM : MonoBehaviour
         // 9. 初始化当前生命值
         blackboard.currentHealth = blackboard.maxHealth;
         playerHealth.currentHealth = blackboard.maxHealth; // 确保PlayerHealth组件同步
+        playerHealth.maxHealth = blackboard.maxHealth;
         Debug.Log($"Current health set: {blackboard.currentHealth}");
 
         // 10. 初始化状态机
