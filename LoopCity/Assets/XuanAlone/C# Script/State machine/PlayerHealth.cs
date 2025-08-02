@@ -5,14 +5,11 @@ using UnityEngine.Events;
 
 public class PlayerHealth : MonoBehaviour
 {
-    [Header("血量设置")]
     public float maxHealth = 100f;
     public float currentHealth;
 
-    [Header("事件")]
-    public UnityEvent onDamageTaken;
+    public UnityEvent onTakeDamage;
     public UnityEvent onDeath;
-    public UnityEvent onHeal;
 
     void Start()
     {
@@ -21,30 +18,16 @@ public class PlayerHealth : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        if (currentHealth <= 0) return; // 已死亡
+        if (currentHealth <= 0) return;
 
         currentHealth -= damage;
-        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
+        currentHealth = Mathf.Max(currentHealth, 0);
 
-        onDamageTaken.Invoke();
-        Debug.Log($"Player took {damage} damage! Health: {currentHealth}/{maxHealth}");
+        onTakeDamage.Invoke();
 
         if (currentHealth <= 0)
         {
-            Die();
+            onDeath.Invoke();
         }
-    }
-
-    public void Heal(float amount)
-    {
-        currentHealth += amount;
-        currentHealth = Mathf.Clamp(currentHealth, 0, maxHealth);
-        onHeal.Invoke();
-    }
-
-    private void Die()
-    {
-        onDeath.Invoke();
-        Debug.Log("Player died!");
     }
 }

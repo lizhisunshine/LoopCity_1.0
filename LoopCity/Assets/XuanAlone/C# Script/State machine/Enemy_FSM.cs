@@ -10,6 +10,9 @@ using Random = UnityEngine.Random;
 #region  敌人黑板
 public class EnemyBlackboard : Blackboard
 {
+    [Header("动画引用")]
+    public Animator animator;
+
     public enum EnemyType { Exploder, Dasher, Shooter }
     public EnemyType enemyType;
 
@@ -51,7 +54,6 @@ public class EnemyBlackboard : Blackboard
     public float currentHealth;
     public Vector2 targetPos;
 }
-
 #endregion
 
 #region  爆炸怪
@@ -110,6 +112,7 @@ public class Enemy_DashState : IState
     private Vector2 dashDirection;
     private Vector2 dashStartPosition;
     private bool hasDamaged;
+    private bool animationStarted;
 
     public Enemy_DashState(FSM fsm)
     {
@@ -124,28 +127,67 @@ public class Enemy_DashState : IState
         dashStartPosition = blackboard.transform.position;
         blackboard.isDashing = true;
         hasDamaged = false;
+        animationStarted = false;
+
+        // 触发冲刺动画
+        if (blackboard.animator != null)
+        {
+            // 方法1: 使用布尔值
+            if (HasAnimationParameter("IsDashing"))
+            {
+                blackboard.animator.SetBool("IsDashing", true);
+            }
+            // 方法2: 使用触发器
+            else if (HasAnimationTrigger("Dash"))
+            {
+                blackboard.animator.SetTrigger("Dash");
+            }
+            // 方法3: 直接播放动画状态
+            else
+            {
+                // 确保有 "Dash" 状态
+                if (HasAnimationState("Dash"))
+                {
+                    blackboard.animator.Play("Dash");
+                }
+            }
+            animationStarted = true;
+        }
     }
 
     public void OnExit()
     {
         blackboard.isDashing = false;
         blackboard.dashTimer = blackboard.dashCooldown;
+
+        // 重置动画状态
+        if (blackboard.animator != null && animationStarted)
+        {
+            if (HasAnimationParameter("IsDashing"))
+            {
+                blackboard.animator.SetBool("IsDashing", false);
+            }
+        }
     }
 
     public void OnUpdate()
     {
+        // 冲刺移动
         blackboard.transform.Translate(
             dashDirection * blackboard.chaseSpeed * 5 * Time.deltaTime,
             Space.World
         );
 
+        // 检测是否达到冲刺距离
         float dashDistance = Vector2.Distance(dashStartPosition, blackboard.transform.position);
         if (dashDistance >= blackboard.dashDistance)
         {
+            // 冲刺结束后回到Idle状态
             fsm.SwitchState(MY_FSM.StateType.Idle);
             return;
         }
 
+        // 检测碰撞玩家
         if (!hasDamaged)
         {
             float distance = Vector2.Distance(
@@ -160,13 +202,65 @@ public class Enemy_DashState : IState
                 {
                     playerHealth.TakeDamage(blackboard.dashDamage);
                     hasDamaged = true;
+
+                    // 禁用碰撞体后再销毁
+                    Collider2D collider = blackboard.transform.GetComponent<Collider2D>();
+                    if (collider != null) collider.enabled = false;
+
+                    // 冲刺怪碰到玩家后自身销毁
                     GameObject.Destroy(blackboard.transform.gameObject);
                 }
             }
         }
     }
-}
 
+    // 检查是否有特定名称的动画状态
+    private bool HasAnimationState(string stateName)
+    {
+        if (blackboard.animator == null) return false;
+
+        var controller = blackboard.animator.runtimeAnimatorController;
+        if (controller == null) return false;
+
+        foreach (var state in controller.animationClips)
+        {
+            if (state.name == stateName)
+                return true;
+        }
+        return false;
+    }
+
+    // 检查动画参数是否存在
+    private bool HasAnimationParameter(string paramName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.name == paramName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 检查动画触发器是否存在
+    private bool HasAnimationTrigger(string triggerName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.type == AnimatorControllerParameterType.Trigger &&
+                param.name == triggerName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+}
 #endregion
 
 #region  射手怪
@@ -324,7 +418,6 @@ public class Enemy_ShootState : IState
         }
     }
 }
-
 #endregion
 
 #region  死亡状态
@@ -333,6 +426,8 @@ public class Enemy_DieState : IState
 {
     private FSM fsm;
     private EnemyBlackboard blackboard;
+    private float deathTimer;
+    private bool deathAnimationStarted;
 
     public Enemy_DieState(FSM fsm)
     {
@@ -343,11 +438,116 @@ public class Enemy_DieState : IState
     public void OnEnter()
     {
         Debug.Log("Enemy died!");
-        GameObject.Destroy(blackboard.transform.gameObject, 0.5f);
+        deathTimer = 0f;
+        deathAnimationStarted = false;
+
+        // 禁用碰撞体
+        Collider2D collider = blackboard.transform.GetComponent<Collider2D>();
+        if (collider != null) collider.enabled = false;
+
+        // 停止移动
+        if (blackboard.transform.TryGetComponent<Rigidbody2D>(out var rb))
+        {
+            rb.velocity = Vector2.zero;
+            rb.simulated = false;
+        }
+
+        // 触发死亡动画
+        if (blackboard.animator != null)
+        {
+            // 尝试使用触发器
+            if (HasAnimationTrigger("Die"))
+            {
+                blackboard.animator.SetTrigger("Die");
+                deathAnimationStarted = true;
+            }
+            // 尝试直接播放死亡动画
+            else if (HasAnimationState("Die"))
+            {
+                blackboard.animator.Play("Die");
+                deathAnimationStarted = true;
+            }
+            else
+            {
+                Debug.LogWarning("No death animation found for enemy");
+            }
+        }
+
+        // 如果没有动画，直接销毁
+        if (!deathAnimationStarted)
+        {
+            GameObject.Destroy(blackboard.transform.gameObject);
+        }
     }
 
     public void OnExit() { }
-    public void OnUpdate() { }
+
+    public void OnUpdate()
+    {
+        if (deathAnimationStarted)
+        {
+            deathTimer += Time.deltaTime;
+
+            // 获取动画长度（假设死亡动画大约1秒）
+            float animationLength = GetAnimationLength("Die");
+
+            // 动画结束后销毁
+            if (deathTimer >= animationLength)
+            {
+                GameObject.Destroy(blackboard.transform.gameObject);
+            }
+        }
+    }
+
+    // 检查动画触发器是否存在
+    private bool HasAnimationTrigger(string triggerName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.type == AnimatorControllerParameterType.Trigger &&
+                param.name == triggerName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 检查是否有特定名称的动画状态
+    private bool HasAnimationState(string stateName)
+    {
+        if (blackboard.animator == null) return false;
+
+        var controller = blackboard.animator.runtimeAnimatorController;
+        if (controller == null) return false;
+
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip.name == stateName)
+                return true;
+        }
+        return false;
+    }
+
+    // 获取动画长度
+    private float GetAnimationLength(string stateName)
+    {
+        if (blackboard.animator == null) return 1.0f; // 默认1秒
+
+        var controller = blackboard.animator.runtimeAnimatorController;
+        if (controller == null) return 1.0f;
+
+        foreach (var clip in controller.animationClips)
+        {
+            if (clip.name == stateName)
+            {
+                return clip.length;
+            }
+        }
+        return 1.0f; // 默认1秒
+    }
 }
 #endregion
 
@@ -368,12 +568,44 @@ public class Enemy_IdleState : IState
     public void OnEnter()
     {
         idleTimer = 0;
+
+        // 设置默认的Idle动画
+        if (blackboard.animator != null)
+        {
+            // 确保动画控制器已经初始化
+            if (blackboard.animator.runtimeAnimatorController != null)
+            {
+                // 检查是否有 "IsMoving" 参数
+                if (HasAnimationParameter("IsMoving"))
+                {
+                    blackboard.animator.SetBool("IsMoving", false);
+                }
+
+                // 检查是否有 "IsDashing" 参数
+                if (HasAnimationParameter("IsDashing"))
+                {
+                    blackboard.animator.SetBool("IsDashing", false);
+                }
+
+                // 强制播放Idle动画
+                PlayAnimationIfExists("Idle");
+            }
+            else
+            {
+                Debug.LogWarning("Animator controller is not assigned on enemy: " + blackboard.transform.name);
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Animator not found on enemy: " + blackboard.transform.name);
+        }
     }
 
     public void OnExit() { }
 
     public void OnUpdate()
     {
+        // 检查是否死亡
         if (blackboard.currentHealth <= 0)
         {
             fsm.SwitchState(MY_FSM.StateType.Die);
@@ -382,23 +614,93 @@ public class Enemy_IdleState : IState
 
         if (blackboard.playerTransform == null) return;
 
-        float sqrDistanceToPlayer = (blackboard.playerTransform.position - blackboard.transform.position).sqrMagnitude;
-        float sqrChaseDistance = blackboard.chaseDistance * blackboard.chaseDistance;
+        // 检查玩家距离
+        float distanceToPlayer = Vector2.Distance(
+            blackboard.transform.position,
+            blackboard.playerTransform.position
+        );
 
-        if (sqrDistanceToPlayer <= sqrChaseDistance)
+        // 如果玩家在追击范围内，切换到追击状态
+        if (distanceToPlayer <= blackboard.chaseDistance)
         {
             fsm.SwitchState(MY_FSM.StateType.Chase);
             return;
         }
 
+        // 待机计时
         idleTimer += Time.deltaTime;
         if (idleTimer > blackboard.idleTime)
         {
             fsm.SwitchState(MY_FSM.StateType.Move);
         }
+
+        // 确保动画状态正确
+        EnsureAnimationState();
+    }
+
+    // 确保动画在正确状态
+    private void EnsureAnimationState()
+    {
+        if (blackboard.animator == null ||
+            blackboard.animator.runtimeAnimatorController == null)
+            return;
+
+        // 获取当前状态信息
+        var stateInfo = blackboard.animator.GetCurrentAnimatorStateInfo(0);
+
+        // 检查是否在Idle状态
+        if (!stateInfo.IsName("Idle"))
+        {
+            // 尝试切换到Idle状态
+            PlayAnimationIfExists("Idle");
+        }
+    }
+
+    // 检查动画参数是否存在
+    public bool HasAnimationParameter(string paramName)
+    {
+        if (blackboard.animator == null) return false;
+
+        // 遍历所有参数
+        foreach (var param in blackboard.animator.parameters)
+        {
+            if (param.name == paramName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 播放指定动画（如果存在）
+    private void PlayAnimationIfExists(string stateName)
+    {
+        if (blackboard.animator == null || blackboard.animator.runtimeAnimatorController == null)
+            return;
+
+        // 检查动画状态是否存在
+        bool stateExists = false;
+        RuntimeAnimatorController ac = blackboard.animator.runtimeAnimatorController;
+        foreach (AnimationClip clip in ac.animationClips)
+        {
+            if (clip.name == stateName)
+            {
+                stateExists = true;
+                break;
+            }
+        }
+
+        // 如果存在则播放
+        if (stateExists)
+        {
+            blackboard.animator.Play(stateName, 0, 0f); // 从开始播放
+        }
+        else
+        {
+            Debug.LogWarning($"Animation state '{stateName}' not found in animator controller");
+        }
     }
 }
-
 #endregion
 
 #region  移动状态
@@ -422,6 +724,12 @@ public class Enemy_MoveState : IState
             blackboard.transform.position.x + randomX,
             blackboard.transform.position.y + randomY
         );
+
+        // 设置移动动画
+        if (blackboard.animator != null && HasAnimationParameter("IsMoving"))
+        {
+            blackboard.animator.SetBool("IsMoving", true);
+        }
     }
 
     public void OnExit() { }
@@ -458,6 +766,21 @@ public class Enemy_MoveState : IState
             );
         }
     }
+
+    // 检查动画参数是否存在
+    private bool HasAnimationParameter(string paramName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.name == paramName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 }
 #endregion
 
@@ -480,6 +803,27 @@ public class Enemy_ChaseState : IState
         {
             blackboard.dashTimer = Mathf.Max(0, blackboard.dashTimer);
         }
+
+        // 设置移动动画
+        if (blackboard.animator != null && HasAnimationParameter("IsMoving"))
+        {
+            blackboard.animator.SetBool("IsMoving", true);
+        }
+    }
+
+    // 检查动画参数是否存在
+    private bool HasAnimationParameter(string paramName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.name == paramName)
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void OnExit() { }
@@ -568,7 +912,6 @@ public class Enemy_ChaseState : IState
         fsm.SwitchState(MY_FSM.StateType.ShooterMove);
     }
 }
-
 #endregion
 
 #region  怪物FSM行为类
@@ -580,6 +923,36 @@ public class Enemy_FSM : MonoBehaviour
     void Start()
     {
         InitializeFSM();
+        // 解决怪物碰撞问题：设置怪物物理层
+        if (LayerMask.NameToLayer("Enemy") != -1)
+        {
+            gameObject.layer = LayerMask.NameToLayer("Enemy");
+
+            // 确保怪物不会阻挡其他怪物
+            Physics2D.IgnoreLayerCollision(
+                LayerMask.NameToLayer("Enemy"),
+                LayerMask.NameToLayer("Enemy"),
+                true
+            );
+        }
+        else
+        {
+            Debug.LogWarning("'Enemy' layer not defined. Creating it.");
+        }
+
+        // 确保 animator 被赋值
+        if (blackboard.animator == null)
+        {
+            blackboard.animator = GetComponent<Animator>();
+            if (blackboard.animator == null)
+            {
+                Debug.LogError("Animator component not found on enemy: " + gameObject.name);
+            }
+            else
+            {
+                Debug.Log("Animator assigned automatically");
+            }
+        }
     }
 
     private void InitializeFSM()
@@ -694,5 +1067,4 @@ public class Enemy_FSM : MonoBehaviour
         }
     }
 }
-
 #endregion

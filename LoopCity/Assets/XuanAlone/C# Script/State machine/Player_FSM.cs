@@ -143,6 +143,12 @@ public class Player_MoveState : IState
             return;
         }
 
+        // 获取输入
+        blackboard.moveDirection = new Vector2(
+            Input.GetAxisRaw("Horizontal"),
+            Input.GetAxisRaw("Vertical")
+        ).normalized;
+
         // 方向控制 ================================
         if (blackboard.moveDirection.x != 0)
         {
@@ -163,11 +169,6 @@ public class Player_MoveState : IState
             blackboard.animator.SetFloat("Vertical", blackboard.moveDirection.y);
             blackboard.animator.SetFloat("Speed", blackboard.moveDirection.magnitude);
         }
-        // 获取输入
-        blackboard.moveDirection = new Vector2(
-            Input.GetAxisRaw("Horizontal"),
-            Input.GetAxisRaw("Vertical")
-        ).normalized;
 
         // 更新瞄准方向
         blackboard.UpdateAimDirection();
@@ -196,6 +197,7 @@ public class Player_MoveState : IState
         }
     }
 }
+
 #endregion
 
 #region 攻击状态
@@ -292,6 +294,9 @@ public class Player_DieState : IState
 {
     private FSM fsm;
     private PlayerBlackboard blackboard;
+    private float deathAnimationLength = 1.5f; // 死亡动画长度（秒）
+    private float deathTimer;
+    private bool animationStarted;
 
     public Player_DieState(FSM fsm)
     {
@@ -301,36 +306,100 @@ public class Player_DieState : IState
 
     public void OnEnter()
     {
-        // 死亡处理 - 停止移动，禁用控制等
+        // 停止所有移动
         blackboard.rb.velocity = Vector2.zero;
 
         // 禁用物理碰撞
         if (blackboard.rb != null)
         {
-            blackboard.rb.simulated = false; // 禁用物理
+            blackboard.rb.simulated = false;
         }
 
         // 播放死亡动画
         if (blackboard.animator != null)
         {
-            blackboard.animator.SetTrigger("Die");
+            // 确保动画控制器有"Die"触发器
+            if (HasAnimationTrigger("Die"))
+            {
+                blackboard.animator.SetTrigger("Die");
+                animationStarted = true;
+
+                // 获取动画长度（如果可能）
+                deathAnimationLength = GetAnimationLength("Die");
+            }
+            else
+            {
+                Debug.LogWarning("Animator does not have 'Die' trigger");
+                animationStarted = false;
+            }
+        }
+        else
+        {
+            animationStarted = false;
         }
 
-        // 禁用玩家控制 - 禁用整个游戏对象或特定组件
-        // 改为禁用整个游戏对象
-        blackboard.transform.gameObject.SetActive(false);
+        // 禁用玩家控制组件
+        if (blackboard.transform.GetComponent<Player_FSM>() != null)
+        {
+            blackboard.transform.GetComponent<Player_FSM>().enabled = false;
+        }
+
+        // 禁用所有碰撞体
+        Collider2D[] colliders = blackboard.transform.GetComponentsInChildren<Collider2D>();
+        foreach (Collider2D col in colliders)
+        {
+            col.enabled = false;
+        }
+
+        // 重置计时器
+        deathTimer = 0f;
     }
 
     public void OnExit() { }
 
     public void OnUpdate()
     {
-        if (blackboard.playerHealth.currentHealth <= 0)
+        // 更新计时器
+        deathTimer += Time.deltaTime;
+
+        // 如果动画已播放完毕，销毁玩家对象
+        if (deathTimer >= deathAnimationLength)
         {
-            fsm.SwitchState(MY_FSM.StateType.Die);
-            return;
+            // 可以在这里添加游戏结束逻辑
+            GameObject.Destroy(blackboard.transform.gameObject);
         }
-    
+    }
+
+    // 检查动画控制器是否有指定的触发器
+    private bool HasAnimationTrigger(string triggerName)
+    {
+        if (blackboard.animator == null) return false;
+
+        foreach (AnimatorControllerParameter param in blackboard.animator.parameters)
+        {
+            if (param.type == AnimatorControllerParameterType.Trigger &&
+                param.name == triggerName)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 获取动画长度
+    private float GetAnimationLength(string animationName)
+    {
+        if (blackboard.animator == null) return deathAnimationLength;
+
+        RuntimeAnimatorController ac = blackboard.animator.runtimeAnimatorController;
+        foreach (AnimationClip clip in ac.animationClips)
+        {
+            if (clip.name == animationName)
+            {
+                return clip.length;
+            }
+        }
+        return deathAnimationLength; // 默认值
     }
 }
 #endregion
@@ -377,6 +446,7 @@ public class Player_FSM : MonoBehaviour
         {
             Debug.LogWarning("Adding Rigidbody2D component");
             rb = gameObject.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 0;
         }
         blackboard.rb = rb;
         Debug.Log($"Rigidbody2D set: {blackboard.rb != null}");
@@ -428,6 +498,7 @@ public class Player_FSM : MonoBehaviour
 
         // 9. 初始化当前生命值
         blackboard.currentHealth = blackboard.maxHealth;
+        playerHealth.currentHealth = blackboard.maxHealth; // 确保PlayerHealth组件同步
         Debug.Log($"Current health set: {blackboard.currentHealth}");
 
         // 10. 初始化状态机
@@ -481,14 +552,6 @@ public class Player_FSM : MonoBehaviour
         bc.damage = 10f;
         bc.speed = 10f;
 
-        // 保存为临时预制体
-#if UNITY_EDITOR
-        if (!Application.isPlaying)
-        {
-            UnityEditor.PrefabUtility.SaveAsPrefabAsset(bullet, "Assets/FallbackBullet.prefab");
-        }
-#endif
-
         return bullet;
     }
 
@@ -514,7 +577,32 @@ public class Player_FSM : MonoBehaviour
     {
         if (collision.gameObject.CompareTag("Enemy"))
         {
-            blackboard.playerHealth.TakeDamage(10f);
+            // 传递伤害值，而不是固定10点
+            EnemyBlackboard enemyBlackboard = collision.gameObject.GetComponent<Enemy_FSM>()?.blackboard;
+            if (enemyBlackboard != null)
+            {
+                // 根据敌人类型决定伤害
+                float damage = 10f; // 默认伤害
+                switch (enemyBlackboard.enemyType)
+                {
+                    case EnemyBlackboard.EnemyType.Exploder:
+                        damage = enemyBlackboard.explosionDamage;
+                        break;
+                    case EnemyBlackboard.EnemyType.Dasher:
+                        damage = enemyBlackboard.dashDamage;
+                        break;
+                    case EnemyBlackboard.EnemyType.Shooter:
+                        damage = enemyBlackboard.projectileDamage;
+                        break;
+                }
+
+                blackboard.playerHealth.TakeDamage(damage);
+            }
+            else
+            {
+                // 默认伤害
+                blackboard.playerHealth.TakeDamage(10f);
+            }
         }
     }
 }
