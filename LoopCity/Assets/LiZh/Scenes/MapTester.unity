@@ -646,8 +646,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   gameMap: {fileID: 612894369}
-  tile: {fileID: 11400000, guid: 56adc56ab321cce4fbca8bf11b02bea2, type: 2}
-  tile1: {fileID: 11400000, guid: 56adc56ab321cce4fbca8bf11b02bea2, type: 2}
+  tile: {fileID: 11400000, guid: 09ed18f1e9ec99d4a8b3884f9848bb75, type: 2}
+  tile1: {fileID: 11400000, guid: 09ed18f1e9ec99d4a8b3884f9848bb75, type: 2}
   centerPoints: []
 --- !u!156049354 &1780054145
 Grid:
@@ -690,7 +690,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   tilemap: {fileID: 612894369}
-  hallwaytile: {fileID: 11400000, guid: 56adc56ab321cce4fbca8bf11b02bea2, type: 2}
+  hallwaytile: {fileID: 11400000, guid: 09ed18f1e9ec99d4a8b3884f9848bb75, type: 2}
   roomCreater: {fileID: 1780054144}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
