@@ -485,18 +485,21 @@ public class Enemy_ShootState : IState
             blackboard.playerTransform.position
         );
 
+        // 如果玩家超出追击范围，回到Idle
         if (distanceToPlayer > blackboard.chaseDistance)
         {
             fsm.SwitchState(MY_FSM.StateType.Idle);
             return;
         }
 
+        // 如果玩家不在攻击范围内，切换到追击状态
         if (distanceToPlayer < blackboard.minRange || distanceToPlayer > blackboard.maxRange)
         {
-            fsm.SwitchState(MY_FSM.StateType.ShooterMove);
+            fsm.SwitchState(MY_FSM.StateType.Chase);
             return;
         }
 
+        // 在攻击范围内，直接攻击
         blackboard.attackTimer += Time.deltaTime;
         if (blackboard.attackTimer >= blackboard.attackInterval)
         {
@@ -530,6 +533,7 @@ public class Enemy_ShootState : IState
             proj.isPlayerBullet = false;
         }
     }
+
 }
 #endregion
 
@@ -994,7 +998,7 @@ public class Enemy_ChaseState : IState
         return false;
     }
 
-    public void OnExit() 
+    public void OnExit()
     {
         // 退出时设置移动动画为 false
         if (blackboard.animator != null &&
@@ -1039,7 +1043,7 @@ public class Enemy_ChaseState : IState
                 break;
 
             case EnemyBlackboard.EnemyType.Shooter:
-                HandleShooter();
+                HandleShooter(playerPosition, sqrDistanceToPlayer);
                 break;
         }
     }
@@ -1083,9 +1087,26 @@ public class Enemy_ChaseState : IState
         );
     }
 
-    private void HandleShooter()
+    private void HandleShooter(Vector2 playerPosition, float sqrDistanceToPlayer)
     {
-        fsm.SwitchState(MY_FSM.StateType.ShooterMove);
+        float minRange = blackboard.minRange;
+        float maxRange = blackboard.maxRange;
+        float distanceToPlayer = Mathf.Sqrt(sqrDistanceToPlayer); // 计算实际距离
+
+        // 如果玩家在攻击范围内，直接射击
+        if (distanceToPlayer >= minRange && distanceToPlayer <= maxRange)
+        {
+            fsm.SwitchState(MY_FSM.StateType.Shoot);
+        }
+        else
+        {
+            // 否则继续追击
+            blackboard.transform.position = Vector2.MoveTowards(
+                blackboard.transform.position,
+                playerPosition,
+                blackboard.chaseSpeed * Time.deltaTime
+            );
+        }
     }
 }
 #endregion

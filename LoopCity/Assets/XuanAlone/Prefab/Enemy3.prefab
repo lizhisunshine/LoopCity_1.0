@@ -212,7 +212,7 @@ MonoBehaviour:
     moveSpeed: 0.5
     chaseSpeed: 3
     chaseDistance: 10
-    attackDistance: 10
+    attackDistance: 7
     transform: {fileID: 4661140263253469250}
     playerTransform: {fileID: 0}
     currentHealth: 0
