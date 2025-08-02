@@ -574,18 +574,6 @@ public class Enemy_DieState : IState
             rb.simulated = false;
         }
 
-
-        Debug.Log("Enemy died!");
-
-        // 如果是爆炸怪且设置了死亡时播放爆炸动画，切换到爆炸状态
-        if (blackboard.enemyType == EnemyBlackboard.EnemyType.Exploder &&
-            blackboard.playExplosionOnDeath)
-        {
-            fsm.SwitchState(MY_FSM.StateType.Explode);
-            return;
-        }
-
-
         // 触发死亡动画
         if (blackboard.animator != null)
         {
