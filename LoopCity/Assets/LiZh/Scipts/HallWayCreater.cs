@@ -8,6 +8,7 @@ public class HallWayCreater : MonoBehaviour
     public Tilemap tilemap;
     public TileBase hallwaytile;
     public RoomCreater roomCreater;
+
     //得到当前所有房间中心点 放进一个列表里面
     List<Vector2> pointList;
     List<Vector2> pointList2;
@@ -69,27 +70,27 @@ public class HallWayCreater : MonoBehaviour
             print("111");
         }
 
-        for (int i = 0; i < pointList.Count-1; i++)
+        for (int i = 0; i < pointList.Count - 1; i++)
         {
             //if (pointList[i].y != pointList[i+1].y)
 
-            for (int j = (int)pointList[i].y; j > (int)pointList[i + 1].y-2; j--)
+            for (int j = (int)pointList[i].y; j > (int)pointList[i + 1].y - 2; j--)
             {
                 tilemap.SetTile(new Vector3Int((int)pointList[i].x, j, 0), hallwaytile);
 
-                tilemap.SetTile(new Vector3Int((int)pointList[i].x+1, j, 0), hallwaytile);
-                tilemap.SetTile(new Vector3Int((int)pointList[i].x-1, j, 0), hallwaytile);
+                tilemap.SetTile(new Vector3Int((int)pointList[i].x + 1, j, 0), hallwaytile);
+                tilemap.SetTile(new Vector3Int((int)pointList[i].x - 1, j, 0), hallwaytile);
 
             }
 
-            if ((int)pointList[i].x> (int)pointList[i + 1].x)
+            if ((int)pointList[i].x > (int)pointList[i + 1].x)
             {
                 for (int j = (int)pointList[i].x; j > (int)pointList[i + 1].x; j--)
-                { 
-                    tilemap.SetTile(new Vector3Int(j,(int)pointList[i+1].y, 0), hallwaytile);
+                {
+                    tilemap.SetTile(new Vector3Int(j, (int)pointList[i + 1].y, 0), hallwaytile);
 
-                    tilemap.SetTile(new Vector3Int(j, (int)pointList[i + 1].y+1, 0), hallwaytile);
-                    tilemap.SetTile(new Vector3Int(j, (int)pointList[i + 1].y-1, 0), hallwaytile);
+                    tilemap.SetTile(new Vector3Int(j, (int)pointList[i + 1].y + 1, 0), hallwaytile);
+                    tilemap.SetTile(new Vector3Int(j, (int)pointList[i + 1].y - 1, 0), hallwaytile);
 
                 }
             }
@@ -106,6 +107,8 @@ public class HallWayCreater : MonoBehaviour
                 }
             }
 
+
         }
     }
+
 }
