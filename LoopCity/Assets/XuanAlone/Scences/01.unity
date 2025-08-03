@@ -583,7 +583,19 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 317788260}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 1569076893}
+        m_TargetAssemblyTypeName: CoinManager, Assembly-CSharp
+        m_MethodName: RestartGame
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
 --- !u!114 &317788260
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2361,8 +2373,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1334, y: -1.8}
-  m_SizeDelta: {x: 604.656, y: 22.16}
+  m_AnchoredPosition: {x: 32.274, y: -1.8}
+  m_SizeDelta: {x: 83.966, y: 22.16}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1275674927
 MonoBehaviour:
@@ -2447,7 +2459,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 0, y: 0, z: 510.52594, w: 0.4732933}
+  m_margin: {x: 0, y: 0, z: 7.6273193, w: 0.4732933}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -2672,7 +2684,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -237, y: 160}
+  m_AnchoredPosition: {x: -207.6, y: 138.5}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1503667712
@@ -3578,7 +3590,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6792464013676196196, guid: cc3a5f0eef1a5d1488a598fe4cb24e79, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8519239463855993577, guid: cc3a5f0eef1a5d1488a598fe4cb24e79, type: 3}
       propertyPath: m_LocalScale.x
@@ -3760,7 +3772,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4254329174284703313, guid: 9ca81ca44b4705a43b84164016e7b214, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

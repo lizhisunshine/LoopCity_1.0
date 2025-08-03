@@ -9,6 +9,7 @@ public class CoinManager : MonoBehaviour
     public static CoinManager Instance { get; private set; }
 
     [Header("UI Settings")]
+    public float Coin = 100;
     public TMP_Text coinText;
     public GameObject gameOverPanel;
 
@@ -65,7 +66,7 @@ public class CoinManager : MonoBehaviour
         UpdateCoinUI();
 
         // 检查是否达到100金币
-        if (_coinCount >= 100)
+        if (_coinCount >= Coin )
         {
             GameOver();
         }
