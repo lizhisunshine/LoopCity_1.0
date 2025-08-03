@@ -224,8 +224,8 @@ MonoBehaviour:
     idealPosition: {x: 0, y: 0}
     maxHealth: 40
     idleTime: 2
-    moveSpeed: 1
-    chaseSpeed: 1
+    moveSpeed: 10
+    chaseSpeed: 6
     chaseDistance: 10
     attackDistance: 1.5
     transform: {fileID: 4770864276133927169}

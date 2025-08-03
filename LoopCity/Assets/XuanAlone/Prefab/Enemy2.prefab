@@ -141,7 +141,7 @@ MonoBehaviour:
     maxHealth: 30
     idleTime: 2
     moveSpeed: 0.25
-    chaseSpeed: 2
+    chaseSpeed: 4
     chaseDistance: 10
     attackDistance: 10
     transform: {fileID: 6865046281073338055}

@@ -218,14 +218,14 @@ MonoBehaviour:
     minRange: 0
     maxRange: 6
     projectileDamage: 5
-    attackInterval: 1.75
+    attackInterval: 0.25
     projectilePrefab: {fileID: 5272023729682885230, guid: a6648964d76b4f548828dbce634f25f4, type: 3}
     attackTimer: 0
     idealPosition: {x: 0, y: 0}
     maxHealth: 50
     idleTime: 2
     moveSpeed: 0.5
-    chaseSpeed: 3
+    chaseSpeed: 6
     chaseDistance: 10
     attackDistance: 7
     transform: {fileID: 4661140263253469250}
