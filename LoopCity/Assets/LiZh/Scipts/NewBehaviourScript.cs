@@ -128,7 +128,7 @@ public class NewBehaviourScript : MonoBehaviour
                 renderer.enabled = false;
             }
 
-            Debug.Log($"边界生成完成，共放置 {boundaryPositions.Count} 个边界瓦片");
+            //Debug.Log($"边界生成完成，共放置 {boundaryPositions.Count} 个边界瓦片");
         }
 
         void CreateBoundaryTilemap()

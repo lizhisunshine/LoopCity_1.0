@@ -15,7 +15,7 @@ public class PlayerBlackboard : Blackboard
 
     [Header("½ÇÉ«ÊôÐÔ")]
     public float maxHealth = 100f;
-    public float moveSpeed = 5f;
+    public float moveSpeed = 100f;
     public float attackDamage = 20f;
     public float attackCooldown = 0.5f;
 

@@ -1,15 +1,23 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 public class RoomCreater : MonoBehaviour
 {
+
     public Tilemap gameMap;
     public TileBase tile;
     public TileBase tile1;
+    public TileBase tile2;
     public List<Vector2> centerPoints;
 
+    public TileBase NextDoortile;
+    public Vector2Int FurthestRoomPoint;
+
+    public GameObject Player;
     // Start is called before the first frame update
     private void Awake()
     {
@@ -42,12 +50,16 @@ public class RoomCreater : MonoBehaviour
             }
 
             centerPoints.Add(Rooms[i + 1].CenterPoint);
-
+            
+            
             //绘制新生成的房间
             Rooms[i + 1].DrawFloor(gameMap, tile);
             Rooms[i + 1].DrawWall(gameMap, tile1);
 
+
         }
+
+        CreatNextDoor(Rooms);
         //print(centerPoints.Count);
     }
     void Start()
@@ -58,6 +70,28 @@ public class RoomCreater : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        
+        if (Player.transform.position.x >= (FurthestRoomPoint.x) - 0.5 &&
+            Player.transform.position.x <= (FurthestRoomPoint.x) + 0.5 &&
+            Player.transform.position.y >= (FurthestRoomPoint.y) - 0.5 &&
+            Player.transform.position.y <= (FurthestRoomPoint.y) + 0.5 )
+        {
+            SceneManager.LoadScene("MapTester");
+        }
+    }
+
+    //下个关卡入口生成的方法 在离中心点最远的那个房间中心防止带有碰撞器的瓦片来监听。
+    public void CreatNextDoor(Room[] Rooms)
+    {
+        Room FurthestRoom = Rooms[0];
+        for (int i = 0; i < 12; i++)
+        {
+            if(Math.Abs( Rooms[i].CenterPoint.x)+ Math.Abs(Rooms[i].CenterPoint.y) <
+                Math.Abs(Rooms[i+1].CenterPoint.x) + Math.Abs(Rooms[i+1].CenterPoint.y))
+                FurthestRoom = Rooms[i+1];
+        }
+        FurthestRoomPoint =  new  Vector2Int((int) FurthestRoom.CenterPoint.x,(int)FurthestRoom.CenterPoint.y);
+        //得到最远端房间
+
+        gameMap.SetTile(new Vector3Int((int)FurthestRoom.CenterPoint.x, (int)FurthestRoom.CenterPoint.y,-1), NextDoortile);
     }
 }

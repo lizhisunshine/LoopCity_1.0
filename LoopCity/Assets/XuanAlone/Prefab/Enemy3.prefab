@@ -94,6 +94,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4661140263253469250}
   - component: {fileID: 6821327258676195051}
+  - component: {fileID: 5682847470748750342}
   - component: {fileID: 798578853088680548}
   - component: {fileID: 5769122885737075821}
   - component: {fileID: 7971474779829667801}
@@ -173,6 +174,20 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &5682847470748750342
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2534190431148319669}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a23cd98a319b9548a9a140f5215b1d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 100
+  deathEffect: {fileID: 0}
 --- !u!114 &798578853088680548
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -203,14 +218,14 @@ MonoBehaviour:
     minRange: 0
     maxRange: 6
     projectileDamage: 5
-    attackInterval: 1.75
+    attackInterval: 0.25
     projectilePrefab: {fileID: 5272023729682885230, guid: a6648964d76b4f548828dbce634f25f4, type: 3}
     attackTimer: 0
     idealPosition: {x: 0, y: 0}
     maxHealth: 50
     idleTime: 2
     moveSpeed: 0.5
-    chaseSpeed: 3
+    chaseSpeed: 6
     chaseDistance: 10
     attackDistance: 7
     transform: {fileID: 4661140263253469250}

@@ -6,7 +6,7 @@ public class PlayerHealth : MonoBehaviour
 {
     public float maxHealth = 100f;
     public float currentHealth;
-    public float hurtFlashDuration = 0.3f; // 受击变红持续时间
+    public float hurtFlashDuration = 0.3f; // 受击变红持续时间 
 
     public UnityEvent onTakeDamage;
     public UnityEvent onDeath;
