@@ -838,7 +838,7 @@ MonoBehaviour:
     currentWeapon: 0
     playerHealth: {fileID: 0}
     maxHealth: 1e+9
-    moveSpeed: 5
+    moveSpeed: 8
     attackDamage: 10
     attackCooldown: 0.5
     transform: {fileID: 346725612}
