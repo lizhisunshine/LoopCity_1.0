@@ -365,6 +365,9 @@ public class Player_DieState : IState
 
         // 重置计时器
         deathTimer = 0f;
+
+        // 关键修改：触发游戏结束
+        CoinManager.Instance?.TriggerGameOver();
     }
 
     public void OnExit() { }

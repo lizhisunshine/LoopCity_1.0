@@ -16,7 +16,7 @@ public class CoinManager : MonoBehaviour
     private const string CoinKey = "PlayerCoins";
     private const string ResetFlagKey = "CoinResetFlag";
     private int _coinCount;
-
+    private bool _isGameOver = false; // 防止重复触发
     void Awake()
     {
         if (Instance == null)
@@ -80,11 +80,26 @@ public class CoinManager : MonoBehaviour
         }
     }
 
-    private void GameOver()
+    public void TriggerGameOver()
     {
+        if (_isGameOver) return;
+        _isGameOver = true;
+
         // 设置重置标志，下次游戏会清零
         PlayerPrefs.SetInt(ResetFlagKey, 1);
 
+        ShowGameOverPanel();
+    }
+
+
+    // 原有的GameOver方法改为私有，并在达到100金币时调用TriggerGameOver
+    private void GameOver()
+    {
+        TriggerGameOver();
+    }
+
+    private void ShowGameOverPanel()
+    {
         if (gameOverPanel != null)
         {
             gameOverPanel.SetActive(true);
@@ -111,6 +126,8 @@ public class CoinManager : MonoBehaviour
 
         // 重新加载场景
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+
+        _isGameOver = false; // 重置标志
     }
 
     // 场景加载时重新绑定UI

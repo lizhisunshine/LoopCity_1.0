@@ -767,7 +767,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: 1774422100, guid: 737db643aa7b1034b973918fa4411459, type: 3}
+  m_Sprite: {fileID: -1855579608, guid: d83b01cb77e5f094d91c3026b64c3b74, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -837,7 +837,7 @@ MonoBehaviour:
   blackboard:
     currentWeapon: 0
     playerHealth: {fileID: 0}
-    maxHealth: 1e+9
+    maxHealth: 100
     moveSpeed: 8
     attackDamage: 10
     attackCooldown: 0.5
