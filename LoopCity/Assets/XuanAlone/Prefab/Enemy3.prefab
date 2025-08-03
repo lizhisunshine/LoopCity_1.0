@@ -186,7 +186,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a23cd98a319b9548a9a140f5215b1d7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 100
+  maxHealth: 150
   deathEffect: {fileID: 0}
 --- !u!114 &798578853088680548
 MonoBehaviour:
@@ -218,11 +218,11 @@ MonoBehaviour:
     minRange: 0
     maxRange: 6
     projectileDamage: 5
-    attackInterval: 0.25
+    attackInterval: 0.5
     projectilePrefab: {fileID: 5272023729682885230, guid: a6648964d76b4f548828dbce634f25f4, type: 3}
     attackTimer: 0
     idealPosition: {x: 0, y: 0}
-    maxHealth: 50
+    maxHealth: 150
     idleTime: 2
     moveSpeed: 0.5
     chaseSpeed: 6

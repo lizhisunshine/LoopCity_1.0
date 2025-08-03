@@ -1254,6 +1254,7 @@ public class Enemy_FSM : MonoBehaviour
         }
     }
 
+    // 伤害处理方法（替代EnemyHealth）
     public void TakeDamage(float damage)
     {
         // 确保只处理活着的敌人
