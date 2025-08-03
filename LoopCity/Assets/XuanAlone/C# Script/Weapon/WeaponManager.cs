@@ -99,6 +99,13 @@ public class WeaponManager : MonoBehaviour
             weaponObjects[currentWeapon].SetActive(true);
         }
 
+        // 更新玩家黑板中的武器信息
+        Player_FSM player = FindObjectOfType<Player_FSM>();
+        if (player != null && player.blackboard != null)
+        {
+            player.blackboard.currentWeapon = currentWeapon;
+        }
+
         // 更新UI
         UpdateUI();
 

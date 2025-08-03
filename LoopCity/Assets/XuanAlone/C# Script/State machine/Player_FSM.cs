@@ -10,6 +10,11 @@ using static UnityEditor.Rendering.CoreEditorDrawer<TData>;
 #region  玩家黑板
 public class PlayerBlackboard : Blackboard
 {
+
+    // 添加以下字段
+    [Header("当前武器")]
+    public WeaponType currentWeapon;
+
     [Header("组件引用")]
     public PlayerHealth playerHealth;
 
@@ -255,6 +260,15 @@ public class Player_AttackState : IState
 
     private void FireBullet()
     {
+        // 只有魔法棒武器才发射子弹
+        if (blackboard.currentWeapon != WeaponType.MagicWand)
+        {
+            // 记录攻击时间但不发射子弹
+            blackboard.lastAttackTime = Time.time;
+            return;
+        }
+
+        // 原始发射子弹的代码保持不变...
         if (blackboard.bulletPrefab && blackboard.firePoint)
         {
             GameObject bullet = GameObject.Instantiate(
@@ -266,13 +280,11 @@ public class Player_AttackState : IState
             BulletController bulletController = bullet.GetComponent<BulletController>();
             if (bulletController)
             {
-                // 确保在实例化后立即设置方向
                 bulletController.direction = blackboard.aimDirection;
                 bulletController.damage = blackboard.attackDamage;
-                bulletController.speed = 10f; // 确保设置速度值
+                bulletController.speed = 10f;
                 bulletController.isPlayerBullet = true;
 
-                // 立即应用方向（可选）
                 if (bulletController.direction != Vector2.zero)
                 {
                     float angle = Mathf.Atan2(
