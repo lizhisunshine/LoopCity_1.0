@@ -125,8 +125,7 @@ public class WeaponManager : MonoBehaviour
             }
         }
 
-
-        // 更新玩家黑板中的武器信息和子弹
+        // 更新玩家黑板中的武器信息
         Player_FSM player = FindObjectOfType<Player_FSM>();
         if (player != null && player.blackboard != null)
         {
@@ -137,7 +136,14 @@ public class WeaponManager : MonoBehaviour
             {
                 player.blackboard.bulletPrefab = magicWandBullet;
             }
+
+            // 关键修改：当切换到魔法棒时，设置攻击冷却时间为0.35秒
+            if (currentWeapon == WeaponType.MagicWand)
+            {
+                player.blackboard.attackCooldown = 0.35f;
+            }
         }
+
         // 更新UI
         UpdateUI();
 
