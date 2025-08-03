@@ -81,10 +81,15 @@ public class MagicBook : MonoBehaviour
 
     private void ApplyDamage(GameObject enemy)
     {
-        EnemyDamageHandler damageHandler = enemy.GetComponent<EnemyDamageHandler>();
-        if (damageHandler != null)
+        // 修改为使用敌人状态机处理伤害
+        Enemy_FSM enemyFSM = enemy.GetComponent<Enemy_FSM>();
+        if (enemyFSM != null)
         {
-            damageHandler.TakeDamage(damagePerCircle);
+            enemyFSM.TakeDamage(damagePerCircle);
+        }
+        else
+        {
+            Debug.LogWarning("Enemy does not have Enemy_FSM component");
         }
     }
 

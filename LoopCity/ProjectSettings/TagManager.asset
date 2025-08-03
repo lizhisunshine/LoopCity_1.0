@@ -8,6 +8,8 @@ TagManager:
   - Bullet
   - Wall
   - Obstacle
+  - CoinText
+  - GameOverPanel
   layers:
   - Default
   - TransparentFX

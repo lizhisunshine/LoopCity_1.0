@@ -559,6 +559,9 @@ public class Enemy_DieState : IState
         deathTimer = 0f;
         deathAnimationStarted = false;
 
+        // 添加金币 - 只在第一次进入死亡状态时添加
+        
+
         // 禁用碰撞体
         Collider2D collider = blackboard.transform.GetComponent<Collider2D>();
         if (collider != null) collider.enabled = false;
@@ -1253,6 +1256,7 @@ public class Enemy_FSM : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
+        // 确保只处理活着的敌人
         if (blackboard.currentHealth <= 0) return;
 
         blackboard.currentHealth -= damage;
@@ -1260,9 +1264,20 @@ public class Enemy_FSM : MonoBehaviour
 
         Debug.Log($"敌人受到 {damage} 伤害! 生命: {blackboard.currentHealth}/{blackboard.maxHealth}");
 
+        // 触发金币系统的关键修改
         if (blackboard.currentHealth <= 0)
         {
-            fsm.SwitchState(MY_FSM.StateType.Die);
+            // 确保只有一次死亡触发
+            if (fsm.curStateType != MY_FSM.StateType.Die)
+            {
+                fsm.SwitchState(MY_FSM.StateType.Die);
+
+                // 确保金币增加逻辑只触发一次
+                if (gameObject.CompareTag("Enemy"))
+                {
+                    CoinManager.Instance?.AddCoin();
+                }
+            }
         }
     }
 
