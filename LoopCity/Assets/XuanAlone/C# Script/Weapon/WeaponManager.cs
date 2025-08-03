@@ -8,6 +8,11 @@ public enum WeaponType { MagicWand, EnergyBlaster, FrostScepter }
 
 public class WeaponManager : MonoBehaviour
 {
+
+    [Header("子弹预制体")]
+    public GameObject magicWandBullet; // 魔法棒原始子弹
+    private GameObject originalWandBullet; // 存储原始子弹
+
     [Header("Weapon References")]
     public GameObject magicWand;
     public GameObject energyBlaster;
@@ -38,6 +43,12 @@ public class WeaponManager : MonoBehaviour
 
         // 禁用所有武器
         DisableAllWeapons();
+
+        // 保存原始子弹
+        if (magicWandBullet != null)
+        {
+            originalWandBullet = magicWandBullet;
+        }
 
         // 激活初始武器
         SwitchWeapon(currentWeapon);
@@ -86,6 +97,12 @@ public class WeaponManager : MonoBehaviour
 
     private void SwitchWeapon(WeaponType newWeapon)
     {
+        // 保存当前魔法棒的子弹（如果当前是魔法棒）
+        if (currentWeapon == WeaponType.MagicWand && magicWandBullet != null)
+        {
+            originalWandBullet = magicWandBullet;
+        }
+
         // 禁用当前武器
         if (weaponObjects.ContainsKey(currentWeapon) && weaponObjects[currentWeapon] != null)
         {
@@ -99,13 +116,28 @@ public class WeaponManager : MonoBehaviour
             weaponObjects[currentWeapon].SetActive(true);
         }
 
-        // 更新玩家黑板中的武器信息
+        // 特殊处理：从魔法弓切换回魔法棒时恢复原始子弹
+        if (newWeapon == WeaponType.MagicWand && currentWeapon == WeaponType.FrostScepter)
+        {
+            if (originalWandBullet != null)
+            {
+                magicWandBullet = originalWandBullet;
+            }
+        }
+
+
+        // 更新玩家黑板中的武器信息和子弹
         Player_FSM player = FindObjectOfType<Player_FSM>();
         if (player != null && player.blackboard != null)
         {
             player.blackboard.currentWeapon = currentWeapon;
-        }
 
+            // 更新子弹预制体
+            if (currentWeapon == WeaponType.MagicWand)
+            {
+                player.blackboard.bulletPrefab = magicWandBullet;
+            }
+        }
         // 更新UI
         UpdateUI();
 
